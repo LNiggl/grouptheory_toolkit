@@ -98,6 +98,16 @@ class Vector:
         self.update()
     def __len__(self):
         return 3
+    def __lt__(self,obj):               # ONLY use for sorting, not actual comparisons
+        if self.x < obj.x and not abs(self.x - obj.x) < 1e-5:
+            return True
+        elif abs(self.x - obj.x) < 1e-5:
+            if self.y < obj.y:
+                return True 
+            elif abs(self.y - obj.y) < 1e-5 and self.z < obj.z:
+                return True 
+        return False
+
     def copy(self):
         x = self.x
         y = self.y
@@ -212,6 +222,12 @@ class Pion:
             assert sign == 1 or sign == -1    
             self.sign = PseudoScalar(sign)
         self.update()
+    def __lt__(self,p):                         # ONLY use for sorting, no comparison
+        if self.sign.num < p.sign.num:
+            return True
+        elif abs(self.sign.num - p.sign.num) < 1e-5:            
+            return self.momentum < p.momentum
+        return False
     def update(self):
         self.name = str_sign(self.sign.num) + "Pi(" + str(self.momentum.x) + "," + str(self.momentum.y) + "," + str(self.momentum.z) + ")"
     def copy(self):
@@ -236,16 +252,22 @@ class Pion:
         self.update()
 
 class Two_Pion:
-    def __init__(self,p1,p2):                               # initialize from two Pion objects 
+    def __init__(self,p1,p2, distinguishable = True):                               # initialize from two Pion objects 
             assert isinstance(p1,Pion) and isinstance(p2,Pion)
             self.pi1 = p1
             self.pi2 = p2
             self.sign = overall_sign([p1,p2])
-            self.update()  
+            self.distinguishable = distinguishable
+            self.update()
+    def __lt__(self,tp):
+        if abs(self.sign.num - tp.sign.num) < 1e-5:
+            return self.pi1.momentum < tp.pi1.momentum
+        return self.sign.num < tp.sign.num 
     def copy(self):
         np1 = self.pi1.copy()
         np2 = self.pi2.copy()
-        new_tp = Two_Pion(np1,np2)
+        dist = self.distinguishable
+        new_tp = Two_Pion(np1,np2,dist)
         return new_tp
     def update(self):
         self.sign = overall_sign([self.pi1,self.pi2])
@@ -255,9 +277,20 @@ class Two_Pion:
         self.update()
         print(self.name)
     def is_equal_to(self,tp):
-        return self.pi1.momentum.is_equal_to(tp.pi1.momentum) and self.pi2.momentum.is_equal_to(tp.pi2.momentum) and self.sign.is_equal_to(tp.sign)
+        assert (self.distinguishable and tp.distinguishable) or (not self.distinguishable and not tp.distinguishable)        
+        if self.distinguishable:
+            return self.pi1.momentum.is_equal_to(tp.pi1.momentum) and self.pi2.momentum.is_equal_to(tp.pi2.momentum) and self.sign.is_equal_to(tp.sign)
+        else:
+            return (self.pi1.momentum.is_equal_to(tp.pi1.momentum) and self.pi2.momentum.is_equal_to(tp.pi2.momentum)\
+                    or self.pi2.momentum.is_equal_to(tp.pi1.momentum) and self.pi1.momentum.is_equal_to(tp.pi2.momentum)) and self.sign.is_equal_to(tp.sign)
     def is_negative_of(self,tp):
-        return self.pi1.momentum.is_equal_to(tp.pi1.momentum) and self.pi2.momentum.is_equal_to(tp.pi2.momentum) and self.sign.is_negative_of(tp.sign)
+        # return self.pi1.momentum.is_equal_to(tp.pi1.momentum) and self.pi2.momentum.is_equal_to(tp.pi2.momentum) and self.sign.is_negative_of(tp.sign)
+        assert (self.distinguishable and tp.distinguishable) or (not self.distinguishable and not tp.distinguishable) 
+        if self.distinguishable:
+            return self.pi1.momentum.is_equal_to(tp.pi1.momentum) and self.pi2.momentum.is_equal_to(tp.pi2.momentum) and self.sign.is_negative_of(tp.sign)
+        else:
+            return (self.pi1.momentum.is_equal_to(tp.pi1.momentum) and self.pi2.momentum.is_equal_to(tp.pi2.momentum)\
+                    or self.pi2.momentum.is_equal_to(tp.pi1.momentum) and self.pi1.momentum.is_equal_to(tp.pi2.momentum)) and self.sign.is_negative_of(tp.sign)
     def action(self,A):
         self.pi1.action(A)
         self.pi2.action(A)              # CAREFUL: no action on sign object, rather: update the sign
@@ -308,8 +341,6 @@ def orbit(object,group):                        #applies action of all Group.ele
         o.action(g)
         if not any([q.is_equal_to(o) for q in orbit]):
             orbit.append(o)    
-    print("orbit:")
-    print_all(orbit)
     return orbit
 def remove_neg(orbit):                          # receives orbit, removes negatives if antiparallel pairs exist                 
     new_list = []
@@ -321,18 +352,16 @@ def remove_neg(orbit):                          # receives orbit, removes negati
         if all(not p.is_negative_of(o) for o in new_list):
             new_list.append(p)
     return new_list
-def generate_basis(objects,group):          # receive list of objects, generates the combinatin of their orbits and outputs the underlying basis as list of objects     
+def generate_basis(objects,group, drop_sign = True):          # receive list of objects, generates the combination of their orbits and outputs the underlying basis as list of objects     
     O = []
     for p in objects:
         for q in orbit(p,group):
             O.append(q)
-    type(objects[0]).sort(O)                # calls class method sort(list_objects); might switch to defining __lt__()
-    print("after sorting:")
-    print_all(O)
-    basis = remove_neg(O)                   # think about it, e.g. for some scalars, sign might be very important
-    print("final basis:")
-    print_all(basis)
-    return basis   
+    O.sort(reverse = True)
+    # could add sorting for something like Pi(-1,0,0). functions <>.ispositive()?
+    if drop_sign:
+        O = remove_neg(O)                   
+    return O  
 
 
 def find_closure(gen_actions, object):       #takes list of Strings gen_actions, some object instance, and returns the closure regarding the objects resulting from combinations of actions  

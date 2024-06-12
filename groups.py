@@ -58,14 +58,6 @@ class Group:                            #includes all important things we know a
         self.char_table = {}
         for r in irreps:
             self.char_table[r.name] = r.characters
-    # def print_char_table(self):
-    #     # print(["{}".format(c)+"\t" for c in self.classes])
-    #     s = ""
-    #     t = ""
-    #     for i in range(len(self.classes)-2):
-    #         s += "%-10s"
-    #     print(s)
-    #     print(s % [i for i in self.classes.keys()])
             
     def find_subgroup(self, gen_el):                            #generates the subgroup via the Cayley table
         subgroup = gen_el.copy()
@@ -125,67 +117,7 @@ def split(O):                   #splits string of actions ABC into array of acti
             P.append(Op)   
     return P
 
-####################### GENERATION OF O_h #########################################
-
-def apply(A,vec,actions):  
-    As = split(A)
-    for i in range(len(As)):
-        vec = apply_to_value(As[i],vec,actions)
-    return vec
-
-def apply_to_value(A,vec,actions):
-    new_vec = vec.copy()
-    for i in range(len(vec)):
-        if "-" in actions[A]["{}".format(i)]:
-            new_vec[int(actions[A]["{}".format(i)][1:])] = minus(vec[i])
-        else:
-            new_vec[int(actions[A]["{}".format(i)])] = vec[i]
-    return new_vec
-
-def find_closure(gen_actions, object):       #looks for closure of group ! regarding the provided action and applied object(usually element of some vector space)
-    actions = gen_actions.copy()
-    known_a_o = {"I": object.copy()}       
-    #plan: apply actions to all objects in known objects, if result is new, add to known_objects with name for the group element
-    n = 0
-    while n != len(known_a_o):                          
-        n = len(known_a_o)
-        for a in actions:
-            for key, obj in known_a_o.items():                
-                temp = obj.copy()
-                temp.action(a)
-                if not all([temp.is_equal(x) for x in known_a_o.values()]):
-                # if new_o not in known_a_o.values():
-                    new_name = remove_I(a + key)
-                    known_a_o[new_name] = temp
-                    actions.append(new_name)      
-    return known_a_o
-
-
-def minus(name):                #makes string for mult with -1. ONLY works if "-" is first character
-    if name[0] == '-':
-        return name[1:]
-    return '-' + name
-
-def readout_action(vec,actions):            #gives according row in actions dict for a vector v resulting from some group action: v = gb (b "basis")
-    r = {}
-    for i in range(len(vec)):
-        r['{}'.format(vec[i])] = '{}'.format(i)
-    if len(vec) != len(actions["I"]):
-        for i in range(len(vec)): 
-            r[minus('{}'.format(vec[i]))] = minus('{}'.format(i))
-    return r
-
-def mult_table_from_actions(actions):                           #CAREFUL! Acting on values with A is like acting on keys with A^-1. The generating actions are self-invers, however (AB)^-1 = B^-1 A^-1  
-    mt = {}
-    for a in actions.keys():                             
-        mt[a] = {}   
-        for b in actions.keys():
-            A = remove_I(a+b)
-            w = apply(A,["0","1","2"],actions)                              #result is w = Ae = abe for reference vector e used for all actions, here e = ["0","1","2"]
-            w = readout_action(w,actions)                                           #convert to long format {0: .. , 1: .., 2: .., -0: .., -1: .., -2: ..}            
-            c = list(actions.keys())[list(actions.values()).index(w)]               # look for c such that ce = abe -> key of w      
-            mt[a][b] = c                                                            # a.b = c because they have the same action
-    return mt
+####################### GENERATION OF O_h ##########################
 
 def find_conjugacy_classes(elements,mt,inv):
     n=len(elements)
@@ -201,5 +133,17 @@ def find_conjugacy_classes(elements,mt,inv):
             tostudy.remove(y)
         classes[x] = conjugate_to
     return classes
+
+######################## group functions #########################
+
+def inner_product(f,h,group,classfunction = True):           # takes (class) functions, e.g. characters, as dictionaries and returns the inner product 1/|G| * \sum_g (f(g)h*(g)) (see e.g. lecture ch. 11)
+    s = 0
+    if classfunction:
+        for c,r in group.classes.items():
+            s += f[c]*np.conjugate(h[c])*len(r)
+    else:
+        for e in group.elements:
+            s += f[e]*np.conjugate(h[e])
+    return s / len(group.elements)
 
 
