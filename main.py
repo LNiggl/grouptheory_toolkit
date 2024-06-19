@@ -11,21 +11,13 @@ ac = o.find_closure(gen_actions,v)
 mt = o.mult_table_from_actions(ac)
 O_h = o.generate_group(gen_actions,v)
 
-# group O
-
-# gen_actions_O = ["Rot0","Rot1","Rot2"]
-# v = o.Vector(["a","b","c"])
-# ac_O = o.find_closure(gen_actions_O,v)
-# mt_O = o.mult_table_from_actions(ac_O)
-# O = o.generate_group(gen_actions_O,v)
-
-b = o.generate_basis([o.Vector([1,0,0])],O_h)
+# irreps of O_h
 
 A1p = r.Representation(O_h,r.rep_trivial(O_h),"A1p")
 A1p.check_if_homomorphism()
 
+b = o.generate_basis([o.Vector([1,0,0])],O_h)
 T1m = r.rep_from_action(O_h,b,"T1m")
-# T1m = r.Representation(O_h,Rep_T1m,"T1m")
 T1m.check_if_homomorphism()
 
 A1m = r.Representation(O_h,r.rep_determinant(T1m.hom),"A1m")
@@ -73,91 +65,45 @@ print("Character table of O_h:")
 for irrep in O_h.char_table.keys():
     print(irrep, ": " , O_h.char_table[irrep])
 
-## tests Pion and Two_Pion reps and finding their irreps
-
-# op = "InvRot2"
+# Two-Pion system: rep and irreps
 
 p1 = o.Pion([1,0,0],"+")
 p2 = o.Pion([-1,0,0],"+")
-# b_p = o.generate_basis([p1],O_h)
-# print("P Basis")
-# o.print_all(b_p)
-# P_Rep = r.rep_from_action(O_h,b_p,"P_Rep")
-# print("P_rep ",op, ":")
-# print(P_Rep.hom[op])
-# r.find_irreps(P_Rep,O_h)
 
-# Two Pion distinguishable
+# Two Pions, distinguishable
 tp1 = o.Two_Pion(p1,p2)
 b_tp = o.generate_basis([tp1],O_h) 
 print("TP Basis")
 o.print_all(b_tp)
+print("# ", len(b_tp))
 TP_Rep = r.rep_from_action(O_h,b_tp,"TP_Rep")
-# print("TP_rep ",op, ":")
-# print(TP_Rep.hom[op])
-s = r.find_irreps(TP_Rep,O_h)
-print("invariant subspaces:")
-for irr in s.keys():
-    print(irr , ":" , s[irr])
 
-# Two Pion indistinguishable
-# tp2 = o.Two_Pion(p1,p2,distinguishable = False)
-# tp3 = o.Two_Pion(p2,p1,distinguishable = False)
-# # o.print_all([tp2,tp3])
-# b_tp2 = o.generate_basis([tp2],O_h) 
-# print("TP Basis, indistinguishable")
-# o.print_all(b_tp2)
-# TP_Rep_indist = r.rep_from_action(O_h,b_tp2,"TP_Rep_indist")
-# # print("Two Pion, insdistinguishable ",op, ":")
-# # print(TP_Rep.hom[op])
-# s1 = r.find_irreps(TP_Rep_indist,O_h)
-# print("invariant subspaces:")
-# for irr in s1.keys():
-#     print(irr , ":" , s1[irr])
+TP_red = r.find_irreps(TP_Rep,O_h)
 
-# product reps to compare to Andreas' notes
+# rho meson: rep and irreps
 
-# Ep_x_Ep = r.product_rep(Ep,Ep)
-# Ep_x_T1p = r.product_rep(Ep,T1p)
-# Ep_x_T2p = r.product_rep(Ep,T2p)
-# T1p_x_T1p = r.product_rep(T1p,T1p)
-# T1p_x_T2p = r.product_rep(T1p,T2p)
-# T2p_x_T2p = r.product_rep(T2p,T2p)
+Rho1 = o.Rho([0,0,0])
+b_r = o.generate_basis([Rho1],O_h) 
+print("Rho Basis")
+o.print_all(b_r)
+print("# ", len(b_r))
+Rho_Rep = r.rep_from_action(O_h,b_r,"Rho_Rep")
 
-# r.find_irreps(Ep_x_Ep,O_h)
-# r.find_irreps(Ep_x_T1p,O_h)
-# r.find_irreps(Ep_x_T2p,O_h)
-# r.find_irreps(T1p_x_T1p,O_h)
-# r.find_irreps(T1p_x_T2p,O_h)
-# r.find_irreps(T2p_x_T2p,O_h)
+rho_red = r.find_irreps(Rho_Rep,O_h)
 
-## all in accordance with note (assuming no issue with: "subduction" SW_3 -> O and splitting e.g. E -> Ep,Em means Ep = E, Em = E_x_A1m)
+# sanity check: compare to general Vector rep
+v = o.Vector([1,2,3])
+b_v = o.generate_basis([v],O_h) 
+print("General Vector Basis")
+o.print_all(b_v)
+print("# ",len(b_v))
+V_Rep = r.rep_from_action(O_h,b_r,"V_Rep")
 
-# regular representation
+V_red = r.find_irreps(V_Rep,O_h)
+# same result as for Vector particle 
 
-# Reg = r.rep_regular(O_h,"Reg")
-# Reg.check_if_homomorphism()
-# r.find_irreps(Reg,O_h)
+#only overlap in irreps of Two_Pion and Rho Meson: T1m
 
-## every irrep occurs as many times as its dimension
-
-
-
-
-
-
-# current:
-
- 
-
-# next: 
-
-# write project_irreps function
-
-
-################### MILESTONE ####################
-
-######## double cover
-
-
-
+P_TP_T1m = TP_red["T1m"][0]
+P_Rho_T1m = rho_red["T1m"][0]
+r.make_subspaces_comparable(P_TP_T1m,P_Rho_T1m,TP_Rep,Rho_Rep)

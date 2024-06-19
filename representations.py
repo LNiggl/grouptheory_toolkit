@@ -1,6 +1,7 @@
 import numpy as np
 import groups as g
 import objects as o
+import numbers
 class Representation(g.Group):
     # hom = {}                           #dict for homomorphism: G -> GL(n)
     # characters = {}
@@ -213,32 +214,32 @@ def projected_to_zero(rep):             #returns True if the matrix of identity 
 # Rot2 = np.matrix([[0,-1,0],
 #         [1,0,0],
 #         [0,0,1]])
-def find_irreps(rep,group):             # Representation and Group objects -> dict: {irrep : [eigenvectors of invariant subspace; last entry: multiplicity of irrep occurrance]}
+def find_irreps(rep,group):             # Representation and Group objects -> dict: {irrep : [projector, multiplicity]}
     c_dim = 0
     result = {}
-    Rep = rep.copy("Rep")
+    Rep = rep.copy("Rep")               # change Rep, leave the input Repr. rep unchanged
     print("irreps of ", rep.name , ":")
     for irrep,chars in group.char_table.items():         
-        temp = rep.copy("temp")
+        temp = Rep.copy("temp")
         P = projector_irrep(temp,chars)
         apply_projector(P,temp)
         if not projected_to_zero(temp):
             result[irrep] = []
             R = np.matrix(np.eye(len(P))) - P
-            apply_projector(R,rep)                 
+            apply_projector(R,Rep)                 
             if temp.is_reducible():
                 print(irrep, "(reducible inv. subspace)-> occurrence: ", temp.characters["I"] / chars["I"])
                 c_dim += temp.characters["I"]
             else:
                 print(irrep, "-> occurrence: 1") 
                 c_dim += temp.characters["I"]
-            result[irrep] = nonzero_simult_eigvecs(Rep.hom["Rot2"],P)
-            result[irrep].append(temp.characters["I"] / chars["I"])
+            result[irrep] = [P,temp.characters["I"] / chars["I"]]
+            # result[irrep].append(temp.characters["I"] / chars["I"])
     print("sum of dims: ",  c_dim)
     return result
 
 def list_eigvecs(M,e):                  # Matrix M and eigenvalue e -> list of eigenvectors for this eigenvalue
-    print("in list_eigvecs")
+    # print("in list_eigvecs")
     result = []
     eigvals,eigvecs = np.linalg.eig(M)           
     for i in range(len(eigvals)):
@@ -246,19 +247,73 @@ def list_eigvecs(M,e):                  # Matrix M and eigenvalue e -> list of e
             # print("eigenvalue: ", eigvals[i], ". Eigenvector", eigvecs[:,i],  "appended")
             result.append(eigvecs[:,i])
     return result
-def list_nonzero_eigvecs(M):
-    print("in list_nonzero")
-    result = []
+def list_nonzero_eigvecs(M):            # Matrix M -> dict {eigenvalue: eigenvector OR [eigenvectors]}
+    # print("in list_nonzero")
+    result = {}
     c = 0
     eigvals,eigvecs = np.linalg.eig(M)           
     for i in range(len(eigvals)):
         if not abs(eigvals[i]) < 1e-8:
-            print("eigenvalue: ", eigvals[i], ". Eigenvector", eigvecs[:,i],  " appended")
-            result.append(eigvecs[:,i])
+            if eigvals[i] not in result.keys(): 
+                result[eigvals[i]] = eigvecs[:,i]
+            else:
+                result[eigvals[i]] = [result[eigvals[i]]]
+                result[eigvals[i]].append(eigvecs[:,i])
             c += 1
     if not c:
         print("no nonzero EVs found")
     return result
-def nonzero_simult_eigvecs(A,P):
-    return list_nonzero_eigvecs(np.matmul(A,P))
+# def nonzero_simult_eigvecs(A,P):
+#     return list_nonzero_eigvecs(np.matmul(A,P))
+# def distinct_nonzero_evs(M):            # matrix M -> True if all nonzero eigenvalues are different
+#     eigvals,eigvecs = np.linalg.eig(M)
+#     eigvals = list(eigvals)
+#     while len(eigvals) > 0:
+#         ev = eigvals.pop()
+#         if not abs(ev) < 1e-8:
+#             for comp in eigvals:
+#                 if abs(ev - comp) < 1e-8:
+#                     return False
+#     return True
+def all_evs_different(ev_dict):                     # to be used with list_nonzero_eigvals() -> True if each Eval appears only once and all Evals are different
+    return all([not isinstance(evecs,list) for evecs in ev_dict.values()]) and nonzeros_all_different(ev_dict.keys())
+def nonzeros_all_different(nums):                   # nonzero list or similar -> True if all nonzero elements are different, False otherwhise
+    nums = list(nums)                               # CAREFUL: in combination with list_nonzero_eigvals(), use all_evs_different() 
+    while len(nums) > 0:
+        ev = nums.pop()
+        if not abs(ev) < 1e-8:
+            for comp in nums:
+                if abs(ev - comp) < 1e-8:
+                    return False
+    return True
+def make_subspaces_comparable(P1,P2,R1,R2):         # projectors P1, P2, Representation R1,R2 of same underlying group -> Evecs of M(g)P1 and M(g)P2 for same g such that all nonzero Evals are different
+                                                # NB: this makes these Evecs transform in the same way, e.g., but not literally, "like the x coordinate of T1m" (see Aaron's note)
+                                                # NB2: similar matrices have the same Evals, but not the same Evecs (wiki)
+    print("in make_subspaces_comparable")
+    paired_evecs = {}
+    candidates = [c for c in R1.classes.keys() if c not in {"I","Inv"}]
+    for c in candidates:
+        temp1 = list_nonzero_eigvecs(np.matmul(R1.hom[c],P1))                                # reminder: -> dict {Evals : Evecs}
+        temp2 = list_nonzero_eigvecs(np.matmul(R2.hom[c],P2))
+        print("Group element: ", c)
+        print("ev P1: ", temp1.keys())
+        print("ev P2: ", temp2.keys())
+        if all_evs_different(temp1) and all_evs_different(temp2):                   # Evals all different
+            ev_temp1 = sorted(temp1.keys())
+            ev_temp2 = sorted(temp2.keys())
+            print("all different evs:")
+            if np.allclose(ev_temp1,ev_temp2,1e-5,1e-10):                                                   # same Evals
+                print("success for element " , c)
+                for i in range(len(ev_temp1)):
+                    paired_evecs[ev_temp1[i]] = [temp1[ev_temp1[i]],temp2[ev_temp2[i]]]
+                return paired_evecs
+            else:
+                print("fail: not all matching eigenvalues.")
+        else:
+            print("fail: not all different eigenvalues for both P1 and P2 and class element ", c)
+    return None
+
+
+
+
              

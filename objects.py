@@ -4,7 +4,8 @@ import groups as g
 # Structure:
 # -every class should have: copy(),update(),printname(),is_equal_to(x), is_negative_of(x),action(),inverse_action()
 # -action and inverse_action should require minimal group theoretical/group specific information
-# -these objects are used by the functions in representations.py to create representations as Representation objects 
+# -these objects are used by the functions in representations.py to create representations as Representation objects
+# classes that directly know about their actions: Scalar, PseudoScalar, Vector 
 class Scalar:
     def __init__(self,n):
         self.num = n
@@ -78,6 +79,7 @@ class PseudoScalar:
         if A == "Inv":
             self.num = minus(self.num)
             self.update()
+        # else: do nothing
     def action(self,A):
         As = g.split(A)
         for i in range(len(As)):
@@ -107,7 +109,6 @@ class Vector:
             elif abs(self.y - obj.y) < 1e-5 and self.z < obj.z:
                 return True 
         return False
-
     def copy(self):
         x = self.x
         y = self.y
@@ -313,7 +314,51 @@ def overall_sign(obj_list):                 # compute overall sign from all occu
     if num_PS % 2:              # odd number of PseudoScalars
         return PseudoScalar(S)
     return Scalar(S)
-
+class Rho:
+    def __init__(self,momentum,struc = None):
+        if isinstance(momentum,Vector):
+            self.momentum = momentum
+        else:
+            assert len(momentum) == 3
+            self.momentum = Vector(momentum)
+        if struc == None:
+            self.vector_structure = Vector(["rho_x","rho_y","rho_z"])
+        elif isinstance(struc,Vector):
+            self.vector_structure = struc
+        else:
+            assert len(struc) == 3
+            self.vector_structure = Vector(struc)
+        self.update()
+    def __lt__(self,obj):               # ONLY use for sorting, not actual comparison
+        if not abs(coord_to_num(self.vector_structure.x) - coord_to_num(obj.vector_structure.x)) < 1e-5: 
+            return coord_to_num(self.vector_structure.x) < coord_to_num(obj.vector_structure.x)
+        elif not abs(coord_to_num(self.vector_structure.y) - coord_to_num(obj.vector_structure.y)) < 1e-5: 
+            return coord_to_num(self.vector_structure.y) < coord_to_num(obj.vector_structure.y)
+        elif not abs(coord_to_num(self.vector_structure.z) - coord_to_num(obj.vector_structure.z)) < 1e-5: 
+            return coord_to_num(self.vector_structure.z) < coord_to_num(obj.vector_structure.z)
+        return self.momentum < obj.momentum
+    def copy(self):
+        mom = self.momentum.copy()
+        struc = self.vector_structure.copy()
+        new_rho = Rho(mom,struc)
+        return new_rho
+    def update(self):
+        self.name = self.vector_structure.name + self.momentum.name[3:]
+    def printname(self):
+        self.update()
+        print(self.name)
+    def is_equal_to(self,R):
+        return self.vector_structure.is_equal_to(R.vector_structure) and self.momentum.is_equal_to(R.momentum)
+    def is_negative_of(self,R):
+        return self.vector_structure.is_negative_of(R.vector_structure) and self.momentum.is_equal_to(R.momentum)
+    def action(self,A):
+        self.vector_structure.action(A)
+        self.momentum.inverse_action(A)
+        self.update()
+    def inverse_action(self,A):
+        self.vector_structure.inverse_action(A)
+        self.momentum.action(A)
+        self.update()
 def print_all(object_list):
     for o in object_list:
         o.printname()    
@@ -334,6 +379,20 @@ def int_sign(sign):
     if sign == "+":
         return 1
     return -1
+def coord_to_num(s):                # used for sorting in Rho __lt__: String s containing x,y, or z and possibly a "-" ->  corresponding int: x -> 3, y -> 2..
+    s = str(s)
+    n = 0
+    if "x" in s:
+        n = 3
+    if "y" in s:
+        n = 2
+    if "z" in s:
+        n = 1
+    if s[0] == "-":
+        n = n*(-1)
+    if n == 0:
+        return None
+    return n
 def orbit(object,group):                        #applies action of all Group.elements to object and returns list of resulting objects without duplicates
     orbit = [object.copy()]
     for g in group.elements:
