@@ -71,6 +71,7 @@ V_Rep = r.rep_from_action(O_h,b_v,"V_Rep")
 print("General Vector Basis")
 o.print_all(b_v)
 print("# ",len(b_v))
+o.printall(V_Rep.basis)
 V_x_V_Rep =r.product_rep(V_Rep,V_Rep)
 
 

@@ -66,10 +66,10 @@ def hom_from_action(group,basis):                                   # returns th
 def rep_from_action(group,basis,name):
     hom = hom_from_action(group,basis)
     Gamma = Representation(group,hom,name)
+    Gamma.basis = basis
     return Gamma        
 def rep_trivial(group):
     return {g: np.matrix([1]) for g in group.elements}                  #returns dict of the homomorphism
-
 def rep_determinant(rep):                                               #pass dict of homomorphism, returns new dict of homomorphism
     return {g: np.matrix(np.linalg.det(rep[g])) for g in rep.keys()}
 def matrix_regular(i,group):          # formula g_i*g_j = sum g_m (delta_i)_{mj}; (delta_i)_{mj} = 1 for m = k and 0 otherwhise; (delta_i) is rep matrix of g_i in regular rep
