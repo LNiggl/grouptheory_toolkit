@@ -359,6 +359,22 @@ class Rho:
         self.vector_structure.inverse_action(A)
         self.momentum.action(A)
         self.update()
+class linear_combination:    
+    def __init__(self,basis,weights,dropsign = True):                       # list of weights of each element in basis; basis: list of objects, e.g. of class <Vector>; 
+                                                            # ! all objects in basis are assumed to be linearly independent
+        self.basis = basis
+        assert len(basis) == len(weights)
+        self.vector = []
+        for i in range(len(basis)):
+            self.vector.append([basis[i],weights[i]])
+        print(self.vector)
+# def assign_weight(object,weight,dropsign = True):
+#     object.weight = weight
+#     if dropsign:
+#         if object.weight < 0 and abs(object.weight) < 1e-8:
+#             object.weight = (-1)*object.weight
+#             object.sign = minus(object.sign)
+#     return object
 def print_all(object_list):
     for o in object_list:
         o.printname()    
@@ -369,6 +385,8 @@ def minus(n):                       # multiplies by (-1) or modifies a String ac
     if n[0] == '-':
         return n[1:]
     return '-' + n
+def negative_pair(m,n):                 #returns True if m = -n up to some precision
+    return abs(m+n) < 1e-8
 def str_sign(sign_mat):
     assert sign_mat == -1 or sign_mat == 1
     if sign_mat == 1:
