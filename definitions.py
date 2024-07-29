@@ -1,17 +1,17 @@
 import numpy as np
 gamma = {                                                                   # gamma matrices copied from github.com/lehner/gpt/blob/master/lib/gpt/core/gamma.py
     0: np.array(
-        [[0, 0, 0, 1j], [0, 0, 1j, 0], [0, -1j, 0, 0], [-1j, 0, 0, 0]],
+        [[0, 0, 0, 1j], [0, 0, 1j, 0], [0, -1j, 0, 0], [-1j, 0, 0, 0]],         #x
         dtype=np.complex128,
     ),
-    1: np.array([[0, 0, 0, -1], [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0]], dtype=np.complex128),
-    2: np.array(
+    1: np.array([[0, 0, 0, -1], [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0]], dtype=np.complex128),   #y
+    2: np.array(                                                                                    #z
         [[0, 0, 1j, 0], [0, 0, 0, -1j], [-1j, 0, 0, 0], [0, 1j, 0, 0]],
         dtype=np.complex128,
     ),
-    3: np.array([[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]], dtype=np.complex128),
-    4: np.diagflat([1, 1, -1, -1]).astype(dtype=np.complex128),
-    11: np.diagflat([1, 1, 1, 1]).astype(dtype=np.complex128)
+    3: np.array([[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]], dtype=np.complex128),     #t
+    4: np.diagflat([1, 1, -1, -1]).astype(dtype=np.complex128),                                 #5
+    11: np.diagflat([1, 1, 1, 1]).astype(dtype=np.complex128)                   #id
     }
 def comm(A,B):
     return A@B - B@A

@@ -13,15 +13,18 @@ O_h = o.generate_group(gen_actions,v)
 
 # irreps of O_h
 
-A1p = r.Representation(O_h,r.rep_trivial(O_h),"A1p")
-A1p.check_if_homomorphism()
+a = [o.Scalar(1)]
+A1p = r.rep_from_action(O_h,a,"A1p")
+
+
 
 b = o.generate_basis([o.Vector([1,0,0])],O_h)
 T1m = r.rep_from_action(O_h,b,"T1m")
 T1m.check_if_homomorphism()
 
-A1m = r.Representation(O_h,r.rep_determinant(T1m.hom),"A1m")
-A1m.check_if_homomorphism()
+ps = o.PseudoScalar(1)
+b_ps = o.generate_basis([ps],O_h)
+A1m = r.rep_from_action(O_h,b_ps,"A1m")
 
 T1m_x_T1m =  r.product_rep(T1m,T1m)           #no irrep
 T1m_T1m_reps = T1m_x_T1m.hom.copy()
@@ -31,7 +34,8 @@ T1p = r.Representation(O_h,T1m_T1m_reps,"T1p")
 r.apply_projectors([r.antisymmetric_projector],T1p)
 T1p.check_if_homomorphism()
 
-T2p = r.Representation(O_h,T1m_T1m_reps,"T2p")
+
+T2p = T1m_x_T1m.copy("T2p")
 r.apply_projectors([r.symmetric_projector,r.invert_projector(r.diagonal_projector)],T2p)
 T2p.check_if_homomorphism()
 
@@ -39,7 +43,7 @@ T2m = r.product_rep(T2p,A1m)
 T2m.name = "T2m"
 T2m.check_if_homomorphism()
 
-Ep = r.Representation(O_h,T1m_T1m_reps,"Ep")
+Ep = T1m_x_T1m.copy("Ep")
 r.apply_projectors([r.traceless_projector,r.diagonal_projector],Ep)
 Ep.check_if_homomorphism()
 Ep.round_chars()
@@ -60,45 +64,14 @@ A2p.name = "A2p"
 A2p.check_if_homomorphism()
 A2p.round_chars()
 
-O_h.set_char_table([A1m,A1p,T1m,T1p,T2m,T2p,Em,Ep,A2m,A2p])
+O_h.set_char_table([A1m,A1p,T1m,T1p,A2m,A2p,T2m,T2p,Em,Ep])
 print("Character table of O_h:")
 for irrep in O_h.char_table.keys():
     print(irrep, ": " , O_h.char_table[irrep])
 
-### rho meson (vector particle): rep and irreps
+# write to file 
+P_file = open("../results/Pion_irreps.txt", "w")
 
-# Rho1 = o.Rho([0,0,0])
-# b_r = o.generate_basis([Rho1],O_h) 
-# # print("Rho Basis")
-# # o.print_all(b_r)
-# # print("# ", len(b_r))
-# Rho_Rep = r.rep_from_action(O_h,b_r,"Rho_Rep")
-
-# rho_red = r.find_irreps(Rho_Rep,O_h)
-
-# # vectors that transform like (x,y,z): 
-
-# P_Rho_T1m = rho_red["T1m"]
-# Rho_vector_components = r.T1_identify_components(P_Rho_T1m,Rho_Rep)
-# print("(x,y,z)-like eigenvectors in Rho_Rep:")
-# print(Rho_vector_components)
-
-# # sanity check: compare to Vector rep
-# v = o.Vector([1,0,0])
-# b_v = o.generate_basis([v],O_h) 
-# V_Rep = r.rep_from_action(O_h,b_v,"V_Rep")
-# print("General Vector Basis")
-# o.print_all(b_v)
-# print("# ",len(b_v))
-
-# V_red = r.find_irreps(V_Rep,O_h)
-# P_A1m_V = V_red["A1m"][0]
-# print(P_A1m_V)
-# import sys
-# sys.exit(0)
-# same result as for the rho Vector particle
-
-### Two-Pion systems: reps and irreps
 
 ##(1,0,0) type single momenta
 
@@ -108,11 +81,14 @@ p2 = o.Pion([-1,0,0],"+")
 # Two Pions, distinguishable
 tp1 = o.Two_Pion(p1,p2)
 b_tp = o.generate_basis([tp1],O_h) 
-print("TP1 Basis: (1,0,0)-type single momenta")
+P_file.write("TP1 Basis: (1,0,0)-type single momenta"+"\n")
+for x in b_tp:
+    P_file.write(x.name + "\n")
 o.print_all(b_tp)
-print("# ", len(b_tp))
+P_file.write("# " + str(len(b_tp)))
 TP_Rep1 = r.rep_from_action(O_h,b_tp,"TP_Rep1")
-
+print(TP_Rep1.hom["Rot2"])
+TP_Rep1.check_if_homomorphism()
 TP_red1 = r.find_irreps(TP_Rep1,O_h)
 
 # # A1p: 1
@@ -121,22 +97,23 @@ TP_red1 = r.find_irreps(TP_Rep1,O_h)
 # # total dim: 6
 
 
-# vectors that span A1p,Ep:
+# vectors that span A1p:
 P_TP1_A1p = TP_red1["A1p"][0]
 print(P_TP1_A1p)
-P_TP1_Ep = TP_red1["Ep"][0]
 TP1_A1p_vecs = r.list_nonzero_eigvecs(P_TP1_A1p)
-TP1_Ep_vecs = r.list_nonzero_eigvecs(P_TP1_Ep)
-print("A1p subspace:") 
-print(TP1_A1p_vecs)
-print("Em subspace:")
-print(TP1_Ep_vecs)
+P_file.write("A1p subspace:"+"\n") 
+P_file.write(str(TP1_A1p_vecs)+"\n")
+
 # vectors that span T1m:
 P_TP1_T1m = TP_red1["T1m"]
 TP1_vector_components = r.T1_identify_components(P_TP1_T1m,TP_Rep1)
-print("(x,y,z)-like eigenvectors in TP1:")
-print(TP1_vector_components)
+P_file.write("(x,y,z)-like eigenvectors in TP1:"+"\n")
+P_file.write(str(TP1_vector_components)+"\n")
 
+P_file.write("Ep subspace:"+"\n")
+P_TP1_Ep = TP_red1["Ep"]
+TP1_Ep_components = r.E_identify_components(P_TP1_Ep,TP_Rep1)
+P_file.write(str(TP1_Ep_components)+"\n")
 # ## (1,1,0)-type momenta
 
 p3 = o.Pion([1,1,0],"+")
@@ -145,10 +122,12 @@ p4 = o.Pion([-1,-1,0],"+")
 # Two Pions, distinguishable
 tp2 = o.Two_Pion(p3,p4)
 b_tp2 = o.generate_basis([tp2],O_h) 
-print("TP2 Basis: (1,1,0)-type single momenta")
+P_file.write("TP2 Basis: (1,1,0)-type single momenta"+"\n")
+for x in b_tp2:
+    P_file.write(x.name + "\n")
 o.print_all(b_tp2)
-print("# ", len(b_tp2))
-TP_Rep2 = r.rep_from_action(O_h,b_tp2,"TP_Rep2")
+P_file.write("# " + str(len(b_tp2))+"\n")
+TP_Rep2 = r.rep_from_action(O_h,b_tp2,"TP_Rep2"+"\n")
 
 TP_red2 = r.find_irreps(TP_Rep2,O_h)
 
@@ -162,15 +141,30 @@ TP_red2 = r.find_irreps(TP_Rep2,O_h)
 
 P_TP2_A1p = TP_red2["A1p"][0]
 P_TP2_T1m = TP_red2["T1m"]
-P_TP2_T2m = TP_red2["T2m"][0]
+
 
 TP2_A1p_vecs = r.list_nonzero_eigvecs(P_TP2_A1p)
-print("A1p subspace:") 
-print(TP2_A1p_vecs)
+P_file.write("A1p subspace:"+"\n") 
+P_file.write(str(TP2_A1p_vecs)+"\n")
 
 TP2_vector_components = r.T1_identify_components(P_TP2_T1m,TP_Rep2)
-print("(x,y,z)-like eigenvectors in TP1:")
-print(TP2_vector_components)
+P_file.write("(x,y,z)-like eigenvectors in TP1:"+"\n")
+P_file.write(str(TP2_vector_components)+"\n")
+
+P_file.write("Ep subspace:"+"\n")
+P_TP2_Ep = TP_red2["Ep"]
+TP2_Ep_components = r.E_identify_components(P_TP2_Ep,TP_Rep2)
+P_file.write(str(TP2_Ep_components)+"\n")
+
+P_file.write("T2m subspace:" + "\n")
+P_TP2_T2m = TP_red2["T2m"]
+TP2_T2m_components = r.T2_identify_components(P_TP2_T2m,TP_Rep2)
+P_file.write(str(TP2_T2m_components)+"\n")
+
+P_file.write("T2p subspace:" + "\n")
+P_TP2_T2p = TP_red2["T2p"]
+TP2_T2p_components = r.T2_identify_components(P_TP2_T2p,TP_Rep2)
+P_file.write(str(TP2_T2p_components)+"\n")
 
 #(1,1,1) type single momenta
 
@@ -180,10 +174,12 @@ p6 = o.Pion([-1,-1,-1],"+")
 # Two Pions, distinguishable
 tp3 = o.Two_Pion(p5,p6)
 b_tp3 = o.generate_basis([tp3],O_h) 
-print("TP3 Basis: (1,1,1)-type single momenta")
+P_file.write("TP3 Basis: (1,1,1)-type single momenta"+"\n")
+for x in b_tp3:
+    P_file.write(x.name + "\n")
 o.print_all(b_tp3)
-print("# ", len(b_tp3))
-TP_Rep3 = r.rep_from_action(O_h,b_tp3,"TP_Rep3")
+P_file.write("# " +  str(len(b_tp3))+"\n")
+TP_Rep3 = r.rep_from_action(O_h,b_tp3,"TP_Rep3"+"\n")
 
 TP_red3 = r.find_irreps(TP_Rep3,O_h)
 
@@ -191,12 +187,24 @@ P_TP3_A1p = TP_red3["A1p"][0]
 P_TP3_T1m = TP_red3["T1m"]
 
 TP3_A1p_vecs = r.list_nonzero_eigvecs(P_TP3_A1p)
-print("A1p subspace:") 
-print(TP3_A1p_vecs)
+P_file.write("A1p subspace:"+"\n") 
+P_file.write(str(TP3_A1p_vecs)+"\n")
 
 TP3_vector_components = r.T1_identify_components(P_TP3_T1m,TP_Rep3)
-print("(x,y,z)-like eigenvectors in TP3:")
-print(TP3_vector_components)
+P_file.write("(x,y,z)-like eigenvectors in TP3:"+"\n")
+P_file.write(str(TP3_vector_components)+"\n")
+
+P_file.write("T2p subspace:" + "\n")
+P_TP3_T2p = TP_red3["T2p"]
+TP3_T2p_components = r.T2_identify_components(P_TP3_T2p,TP_Rep3)
+P_file.write(str(TP3_T2p_components)+"\n")
+
+P_TP3_A2m = TP_red3["A2m"][0]
+# print(P_TP1_A1p)
+TP3_A2m_vecs = r.list_nonzero_eigvecs(P_TP3_A2m)
+P_file.write("A2m subspace:"+"\n") 
+P_file.write(str(TP3_A2m_vecs)+"\n")
+
 #(2,1,0) type single momenta
 
 p7 = o.Pion([2,1,0],"+")
@@ -205,10 +213,12 @@ p8 = o.Pion([-2,-1,0],"+")
 # Two Pions, distinguishable
 tp4 = o.Two_Pion(p7,p8)
 b_tp4 = o.generate_basis([tp4],O_h) 
-print("TP3 Basis: (2,1,0)-type single momenta")
+P_file.write("TP4 Basis: (2,1,0)-type single momenta"+"\n")
+for x in b_tp4:
+    P_file.write(x.name + "\n")
 o.print_all(b_tp4)
-print("# ", len(b_tp4))
-TP_Rep4 = r.rep_from_action(O_h,b_tp4,"TP_Rep3")
+P_file.write("# "+ str(len(b_tp4))+"\n")
+TP_Rep4 = r.rep_from_action(O_h,b_tp4,"TP_Rep4")
 
 TP_red4 = r.find_irreps(TP_Rep4,O_h)
 
@@ -224,12 +234,33 @@ P_TP4_A1p = TP_red4["A1p"][0]
 P_TP4_T1m = TP_red4["T1m"]
 
 TP4_A1p_vecs = r.list_nonzero_eigvecs(P_TP4_A1p)
-print("A1p subspace:") 
-print(TP4_A1p_vecs)
+P_file.write("A1p subspace:"+"\n") 
+P_file.write(str(TP4_A1p_vecs)+"\n")
 
 TP4_vector_components = r.T1_identify_components(P_TP4_T1m,TP_Rep4)
-print("(x,y,z)-like eigenvectors in TP4:")
-print(TP4_vector_components)
+P_file.write("(x,y,z)-like eigenvectors in TP4:"+"\n")
+P_file.write(str(TP4_vector_components)+"\n")
+
+P_file.write("Ep subspace:"+"\n")
+P_TP4_Ep = TP_red4["Ep"]
+TP4_Ep_components = r.E_identify_components(P_TP4_Ep,TP_Rep4)
+P_file.write(str(TP4_Ep_components)+"\n")
+
+P_file.write("T2m subspace:" + "\n")
+P_TP4_T2m = TP_red4["T2m"]
+TP4_T2m_components = r.T2_identify_components(P_TP4_T2m,TP_Rep4)
+P_file.write(str(TP4_T2m_components)+"\n")
+
+P_file.write("T2p subspace:" + "\n")
+P_TP4_T2p = TP_red4["T2p"]
+TP4_T2p_components = r.T2_identify_components(P_TP4_T2p,TP_Rep4)
+P_file.write(str(TP4_T2p_components)+"\n")
+
+P_TP4_A2p = TP_red4["A2p"][0]
+# print(P_TP1_A1p)
+TP4_A2p_vecs = r.list_nonzero_eigvecs(P_TP4_A2p)
+P_file.write("A2p subspace:"+"\n") 
+P_file.write(str(TP4_A2p_vecs)+"\n")
 
 #(2,1,1) type single momenta
 
@@ -239,9 +270,11 @@ p10 = o.Pion([-2,-1,-1],"+")
 # Two Pions, distinguishable
 tp5 = o.Two_Pion(p9,p10)
 b_tp5 = o.generate_basis([tp5],O_h) 
-print("TP4 Basis: (2,1,1)-type single momenta")
+P_file.write("TP5 Basis: (2,1,1)-type single momenta:"+"\n")
+for x in b_tp5:
+    P_file.write(x.name + "\n")
 o.print_all(b_tp5)
-print("# ", len(b_tp5))
+P_file.write("# " + str(len(b_tp5))+"\n")
 TP_Rep5 = r.rep_from_action(O_h,b_tp5,"TP_Rep5")
 
 TP_red5 = r.find_irreps(TP_Rep5,O_h)
@@ -259,19 +292,77 @@ P_TP5_A1p = TP_red5["A1p"][0]
 P_TP5_T1m = TP_red5["T1m"]
 
 TP5_A1p_vecs = r.list_nonzero_eigvecs(P_TP5_A1p)
-print("A1p subspace:") 
-print(TP5_A1p_vecs)
+P_file.write("A1p subspace:"+"\n") 
+P_file.write(str(TP5_A1p_vecs)+"\n")
 
 TP5_vector_components = r.T1_identify_components(P_TP5_T1m,TP_Rep5)
-print("(x,y,z)-like eigenvectors in TP5:")
-print(TP5_vector_components)
+P_file.write("(x,y,z)-like eigenvectors in TP5:"+"\n")
+P_file.write(str(TP5_vector_components)+"\n")
 
-#shared with rho: T1m, T2m, Em, A2m
+P_file.write("Ep subspace:"+"\n")
+P_TP5_Ep = TP_red5["Ep"]
+TP5_Ep_components = r.E_identify_components(P_TP5_Ep,TP_Rep5)
+P_file.write(str(TP5_Ep_components)+"\n")
+
+P_file.write("Em subspace:"+"\n")
+P_TP5_Em = TP_red5["Em"]
+P_file.write(str(P_TP5_Em)+"\n")
+TP5_Em_components = r.E_identify_components(P_TP5_Em,TP_Rep5)
+P_file.write(str(TP5_Em_components)+"\n")
+
+P_file.write("T2m subspace:" + "\n")
+P_TP5_T2m = TP_red5["T2m"]
+TP5_T2m_components = r.T2_identify_components(P_TP5_T2m,TP_Rep5)
+P_file.write(str(TP5_T2m_components)+"\n")
+
+P_file.write("T2p subspace:" + "\n")
+P_TP5_T2p = TP_red5["T2p"]
+TP5_T2p_components = r.T2_identify_components(P_TP5_T2p,TP_Rep5)
+P_file.write(str(TP5_T2p_components)+"\n")
+
+P_TP5_A2m = TP_red5["A2m"][0]
+# print(P_TP1_A1p)
+TP5_A2m_vecs = r.list_nonzero_eigvecs(P_TP5_A2m)
+P_file.write("A2m subspace:"+"\n") 
+P_file.write(str(TP5_A2m_vecs)+"\n")
 
 
-# #tests
+################################
+P_file.close()
+#test 
 
-# lc = o.linear_combination(b_tp,[0,1,1,0,1,1])
+# sca = o.ScalarParticle([0,0,0])
+# b_sca = o.generate_basis(sca,O_h)
+# sca_rep = r.rep_from_action(O_h,b_sca,"scalar_rep")
+# o.print_all(sca_rep.basis)
+# print(sca_rep.hom["Inv"])
+# sca_rep.check_if_homomorphism()
+# r.study_irreps(sca_rep,O_h,"../results/ScalarParticle_irreps.txt")
+
+psca = o.PseudoScalarParticle([0,0,0])
+b_psca = o.generate_basis(psca,O_h)
+psca_rep = r.rep_from_action(O_h,b_psca,"pseudoscalar_rep")
+o.print_all(psca_rep.basis)
+print(psca_rep.hom["Inv"])
+# psca_rep.check_if_homomorphism()
+# r.study_irreps(psca_rep,O_h,"../results/PseudoScalarParticle_irreps.txt")
+
+vec = o.VectorParticle([0,0,0])
+b_vec = o.generate_basis(vec,O_h)
+vec_rep = r.rep_from_action(O_h,b_vec,"vector_rep")
+o.print_all(vec_rep.basis)
+vec_rep.check_if_homomorphism()
+print(vec_rep.hom["Inv"])
+r.study_irreps(vec_rep,O_h,"../results/VectorParticle_irreps.txt" )
+
+pvec = o.PseudoVectorParticle([0,0,0])
+b_pvec = o.generate_basis(pvec,O_h)
+pvec_rep = r.rep_from_action(O_h,b_pvec,"pseudovector_rep")
+o.print_all(pvec_rep.basis)
+print(pvec_rep.hom["Inv"])
+pvec_rep.check_if_homomorphism()
+r.study_irreps(pvec_rep,O_h,"../results/PseudoVectorParticle_irreps.txt")
+
 
 
 

@@ -24,17 +24,24 @@ class Representation(g.Group):
         # inv = self.inverse_list.copy()
         hom = self.hom.copy()
         new_rep = Representation(self.group,hom,name)
+        if hasattr(self,"basis"):
+            new_rep.basis = self.basis
         # chars = self.characters.copy()
         return new_rep
     def update(self):
         for c in self.classes:
             self.characters[c] = np.trace(self.hom[c])
-        
     def check_if_homomorphism(self):
         for g in self.elements:
             for h in self.elements:
                 eps = np.linalg.norm(np.matmul(self.hom[g],self.hom[h]) - self.hom[self.mult_table[g][h]])
-                assert eps < 1e-13
+                assert eps < 1e-13    
+    # def check_if_homomorphism2(self):
+    #     for g in self.elements:
+    #         for h in self.elements:
+    #             eps = np.linalg.norm(np.matmul(self.hom[g],self.hom[h]) - self.hom[self.mult_table[g][h]])
+    #             print(g,h)
+    #             assert eps < 1e-13
     def is_reducible(self):
         return g.inner_product(self.characters,self.characters,self.group) - 1 > 1e-5
 
@@ -89,11 +96,21 @@ def rep_regular(group,name):
     return r
         
 def product_rep(A, B):                                  #pass two  representation objects (of same group). Returns new representation object
+    assert hasattr(A,"basis")
+    assert hasattr(B,"basis") 
     hom = {}
     for g in A.elements:
        hom[g] = np.kron(A.hom[g],B.hom[g])
     r = Representation(A,hom,A.name + "_x_" + B.name)
+    r.basis = product_basis(A.basis,B.basis)
     return r            
+def product_basis(A,B):                 # arrays A,B of objects-> basis of product space as done via Kronecker product (np.kron())
+    basis = {}
+    for i in range(len(A)):
+        for j in range(len(B)):
+            # basis[i*len(A)+j] = [A[i],B[j]]
+            basis[i*len(A)+j] = o.TensorProduct(A[i],B[j])
+    return basis
 
 # projectors (adapted from the lecture notes: Prof. Dr. Christoph Lehner: Lattice QCD, chapter 11)
 def projector_irrep(rep,irrep):                 #takes rep and EITHER Representation object OR line in char_table ( -> dict object) irrep, returns projector as matrix                            
@@ -199,10 +216,7 @@ def apply_projectors(projectors,rep):       #input: array of projector functions
     else:
         P = projectors[0](n)
         for p in projectors[1:]:
-            P = P * p(n)
-    # for g,v in rep.hom.items():
-    #     rep.hom[g] = P*rep.hom[g]*P
-    # rep.update()  
+            P = P * p(n)  
     apply_projector(P,rep)                 
 def apply_projector(P,rep):
     for g,v in rep.hom.items():
@@ -254,7 +268,7 @@ def list_nonzero_eigvecs(M):            # Matrix M -> dict {eigenvalue: [eigenve
     eigvals,eigvecs = np.linalg.eig(M)          
     for i in range(len(eigvals)):
         if not abs(eigvals[i]) < 1e-8:  
-            ev = match_in_list(eigvals[i],list(result.keys()))   
+            ev = o.match_in_list(eigvals[i],list(result.keys()))   
             if ev == None: 
                 result[eigvals[i]] = [eigvecs[:,i]]
             else:
@@ -268,9 +282,14 @@ def list_nonzero_eigvecs(M):            # Matrix M -> dict {eigenvalue: [eigenve
         print("no nonzero EVs found")
     return result
 def match_in_list(x,l_y):                    # returns None if x is not equal up to numerical error to any value in l_y, otherwhise returns first match
-    for y in l_y:
-        if abs(x-y) < 1e-8:
-            return y
+    if hasattr(x, "is_equal_to"):
+        for y in l_y:
+            if x.is_equal_to(y):
+                return y
+    else:
+        for y in l_y:
+            if abs(x-y) < 1e-8:
+                return y
     return None
 def nonzero_evs_different(ev_dict,mult):                     # to be used with list_nonzero_eigvals() -> True if each Eval which is nonzero appears only up to given multiplicity mult
     # print("in nonzero_evs_different")
@@ -334,10 +353,101 @@ def T1_identify_components(P,Rep):          # P = [proj,mult] -> dict {"x" : v o
     components["y"] = []
     components["z"] = []
     for x in components["x"]:
-        y = (np.matmul(x.T,Rep.hom["Rot2"])).T
+        y = np.matmul(Rep.hom["Rot2"],x)
         components["y"].append(y)                                        # if above statement holds and x is like x component of T1, then it should rotate to y
-        components["z"].append(np.matmul(y.T,Rep.hom["Rot0"]).T)
+        components["z"].append(np.matmul(Rep.hom["Rot0"],y))
     return components
+
+def E_identify_components(P,Rep):          # P = [proj,mult] -> dict {"xx-yy": .., "xx-zz": ..} such that same array entries, e.g. dict["x"][0],dict["y"][0],.. form an inv. subspace
+    components = {}
+    P_orientation = list_nonzero_eigvecs(np.matmul(Rep.hom["Rot2"],P[0]))               # Eigvec with EV -1 transforms like (x_1,x_2) - (y_1,y_2) in T1m_x_T1m
+    for e in list(P_orientation.keys()):
+        if abs(e+1)< 1e-8:
+            components["xx-yy"] = P_orientation[e]
+    components["xx-zz"] = []
+    for x in components["xx-yy"]:
+        components["xx-zz"].append(np.matmul(Rep.hom["Rot0"],x))                # rotate xx-yy to xx-zz
+    return components
+
+def T2_identify_components(P,Rep):          # P = [proj,mult] -> dict {"xx-yy": .., "xx-zz": ..} such that same array entries, e.g. dict["x"][0],dict["y"][0],.. form an inv. subspace
+    components = {}
+    P_orientation = list_nonzero_eigvecs(np.matmul(Rep.hom["Rot2"],P[0]))               # Eigvec with EV -1 transforms like (x_1,x_2) - (y_1,y_2) in T1m_x_T1m
+    for e in list(P_orientation.keys()):
+        if abs(e+1)< 1e-8:
+            components["xy+yx"] = P_orientation[e]
+    components["xz+zx"] = []
+    components["yz+zy"] = [] 
+    for a in components["xy+yx"]:
+        components["xz+zx"].append(np.matmul(Rep.hom["Rot0"],a))                # rotate xy+yx to xz+zx   
+    for b in components["xz+zx"]:
+        components["yz+zy"].append(np.matmul(Rep.hom["Rot2"],b))                # rotate xz+zx to yz+zy
+    return components
+def study_irreps(rep,group,filename):                               # find all irreps(like find_irreps()), then decompose all subspaces and write results to file; 
+                                                                    # filename: absolute or relative path, must end in desired format,e.g. ".txt" 
+    c_dim = 0
+    P_irrep = {}
+    Rep = rep.copy("Rep")               # change Rep, leave the input Repr. rep unchanged
+    print("irreps of ", rep.name , ":")
+    for irrep,chars in group.char_table.items():         
+        temp = Rep.copy("temp")
+        P = projector_irrep(temp,chars)
+        apply_projector(P,temp)
+        if not projected_to_zero(temp):
+            P_irrep[irrep] = []
+            R = np.matrix(np.eye(len(P))) - P
+            apply_projector(R,Rep)                 
+            if temp.is_reducible():
+                print(irrep, "(reducible inv. subspace)-> occurrence: ", temp.characters["I"] / chars["I"])
+                c_dim += temp.characters["I"]
+            else:
+                print(irrep, "-> occurrence: 1") 
+                c_dim += temp.characters["I"]
+            P_irrep[irrep] = [P,temp.characters["I"] / chars["I"]]
+    print("sum of dims: ",  c_dim)
+    
+    f = open(filename, "w")
+    f.write("Basis of " + rep.name + ": \n") 
+    for b in rep.basis:
+        f.write(b.name + "\n")
+    f.write("Dimension: " + str(len(rep.basis)) + "\n")
+    for key,P_n_pair in P_irrep.items():
+        if key == "A1m" or key == "A1p":                   
+            vecs = list_nonzero_eigvecs(P_n_pair[0])
+            if key == "A1m":
+                f.write("A1m subspace:"+"\n") 
+            else:
+                f.write("A1p subspace:"+"\n")
+            f.write(str(vecs)+"\n")
+        if key == "T1m" or key == "T1p":
+            vecs = T1_identify_components(P_n_pair,rep)
+            if key == "T1m":
+                f.write("T1m subspace:"+"\n")
+            else:
+                f.write("T1p subspace:"+"\n")
+            f.write(str(vecs)+"\n")
+        if key == "A2m" or key == "A2p":                   
+            vecs = list_nonzero_eigvecs(P_n_pair[0])
+            if key == "A2m":
+                f.write("A2m subspace:"+"\n") 
+            else:
+                f.write("A2p subspace:"+"\n")
+            f.write(str(vecs)+"\n")
+        if key == "T2m" or key == "T2p":
+            vecs = T2_identify_components(P_n_pair,rep)
+            if key == "T2m":
+                f.write("T2m subspace:"+"\n")
+            else:
+                f.write("T2p subspace:"+"\n")
+            f.write(str(vecs)+"\n")
+        if key == "Em" or key == "Ep":
+            vecs = E_identify_components(P_n_pair,rep)
+            if key == "Em":
+                f.write("Em subspace:"+"\n")
+            else:
+                f.write("Ep subspace:"+"\n")
+            f.write(str(vecs)+"\n")
+    f.close()
+
 
 
     
