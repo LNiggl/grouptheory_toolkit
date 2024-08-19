@@ -5,7 +5,7 @@ import groups as g
 # -every class should have: copy(),update(),printname(),is_equal_to(x), is_negative_of(x),action(),inverse_action()
 # -action and inverse_action should require minimal group theoretical/group specific information
 # -these objects are used by the functions in representations.py to create representations as Representation objects
-# classes that directly know about their actions: Scalar, PseudoScalar, Vector 
+# classes that directly know about their actions: Scalar, PseudoScalar, Vector, Tensor 
 class Scalar:
     def __init__(self,n):
         self.direction_action = "left"
@@ -403,7 +403,6 @@ def idx_to_vec(n):                          # takes int from 0,1,2 and creates V
         i += 1
     v = Vector(a1)
     return v
-
 def vector_sum(vecs):                       # input: list of Vector objects. Output: Vector object  
     x_tot = 0
     y_tot = 0
@@ -414,165 +413,121 @@ def vector_sum(vecs):                       # input: list of Vector objects. Out
         z_tot += v.z
     return Vector([x_tot,y_tot,z_tot])
 
-class Pion:
-    def __init__(self,momentum,sign):        
-        if isinstance(momentum,Vector):
-            self.momentum = momentum
-        else:
-            assert len(momentum) == 3
-            self.momentum = Vector(momentum)
-        if isinstance(sign,PseudoScalar):
-            if not isinstance(sign.num,numbers.Number):
-                sign.num = int_sign(sign.num)
-            assert sign.num == 1 or sign.num == -1
-            self.sign = sign
-        else:
-            if not isinstance(sign,numbers.Number):
-                sign = int_sign(sign)
-            assert sign == 1 or sign == -1    
-            self.sign = PseudoScalar(sign)
-        self.update()
-    def __lt__(self,p):                         # ONLY use for sorting, no comparison
-        if self.sign.num < p.sign.num:
-            return True
-        elif abs(self.sign.num - p.sign.num) < 1e-5:            
-            return self.momentum < p.momentum
-        return False
-    def update(self):
-        self.name = str_sign(self.sign.num) + "Pi(" + str(self.momentum.x) + "," + str(self.momentum.y) + "," + str(self.momentum.z) + ")"
-    def copy(self):
-        m = self.momentum.copy()
-        s = self.sign.copy()
-        new_p = Pion(m,s)
-        return new_p
-    def printname(self):
-        self.update()
-        print(self.name)
-    def is_equal_to(self,p):
-        return self.momentum.is_equal_to(p.momentum) and self.sign.is_equal_to(p.sign)
-    def is_negative_of(self,p):
-        return self.momentum.is_equal_to(p.momentum) and self.sign.is_negative_of(p.sign)
-    def action(self,A):
-        self.momentum.inverse_action(A)
-        self.sign.action(A)
-        self.update()
-    def inverse_action(self,A):
-        self.momentum.action(A)
-        self.sign.inverse_action(A)
-        self.update()
+# class Pion:
+#     def __init__(self,momentum,sign):        
+#         if isinstance(momentum,Vector):
+#             self.momentum = momentum
+#         else:
+#             assert len(momentum) == 3
+#             self.momentum = Vector(momentum)
+#         if isinstance(sign,PseudoScalar):
+#             if not isinstance(sign.num,numbers.Number):
+#                 sign.num = int_sign(sign.num)
+#             assert sign.num == 1 or sign.num == -1
+#             self.sign = sign
+#         else:
+#             if not isinstance(sign,numbers.Number):
+#                 sign = int_sign(sign)
+#             assert sign == 1 or sign == -1    
+#             self.sign = PseudoScalar(sign)
+#         self.update()
+#     def __lt__(self,p):                         # ONLY use for sorting, no comparison
+#         if self.sign.num < p.sign.num:
+#             return True
+#         elif abs(self.sign.num - p.sign.num) < 1e-5:            
+#             return self.momentum < p.momentum
+#         return False
+#     def update(self):
+#         self.name = str_sign(self.sign.num) + "Pi(" + str(self.momentum.x) + "," + str(self.momentum.y) + "," + str(self.momentum.z) + ")"
+#     def copy(self):
+#         m = self.momentum.copy()
+#         s = self.sign.copy()
+#         new_p = Pion(m,s)
+#         return new_p
+#     def printname(self):
+#         self.update()
+#         print(self.name)
+#     def is_equal_to(self,p):
+#         return self.momentum.is_equal_to(p.momentum) and self.sign.is_equal_to(p.sign)
+#     def is_negative_of(self,p):
+#         return self.momentum.is_equal_to(p.momentum) and self.sign.is_negative_of(p.sign)
+#     def action(self,A):
+#         self.momentum.inverse_action(A)
+#         self.sign.action(A)
+#         self.update()
+#     def inverse_action(self,A):
+#         self.momentum.action(A)
+#         self.sign.inverse_action(A)
+#         self.update()
 
-class Two_Pion:
-    def __init__(self,p1,p2, distinguishable = True):                               # initialize from two Pion objects 
-            assert isinstance(p1,Pion) and isinstance(p2,Pion)
-            self.pi1 = p1
-            self.pi2 = p2
-            self.sign = overall_sign([p1,p2])
-            self.distinguishable = distinguishable
-            self.update()
-    def __lt__(self,tp):
-        if abs(self.sign.num - tp.sign.num) < 1e-5:
-            return self.pi1.momentum < tp.pi1.momentum
-        return self.sign.num < tp.sign.num 
-    def copy(self):
-        np1 = self.pi1.copy()
-        np2 = self.pi2.copy()
-        dist = self.distinguishable
-        new_tp = Two_Pion(np1,np2,dist)
-        return new_tp
-    def update(self):
-        self.sign = overall_sign([self.pi1,self.pi2])
-        self.name = str_sign(self.sign.num) + "[Pi(" + str(self.pi1.momentum.x) + "," + str(self.pi1.momentum.y) + "," + str(self.pi1.momentum.z) + ")"\
-            + "_x_Pi(" + str(self.pi2.momentum.x) + "," + str(self.pi2.momentum.y) + "," + str(self.pi2.momentum.z) + ")]"
-    def printname(self):
-        self.update()
-        print(self.name)
-    def is_equal_to(self,tp):
-        assert (self.distinguishable and tp.distinguishable) or (not self.distinguishable and not tp.distinguishable)        
-        if self.distinguishable:
-            return self.pi1.momentum.is_equal_to(tp.pi1.momentum) and self.pi2.momentum.is_equal_to(tp.pi2.momentum) and self.sign.is_equal_to(tp.sign)
-        else:
-            return (self.pi1.momentum.is_equal_to(tp.pi1.momentum) and self.pi2.momentum.is_equal_to(tp.pi2.momentum)\
-                    or self.pi2.momentum.is_equal_to(tp.pi1.momentum) and self.pi1.momentum.is_equal_to(tp.pi2.momentum)) and self.sign.is_equal_to(tp.sign)
-    def is_negative_of(self,tp):
-        assert (self.distinguishable and tp.distinguishable) or (not self.distinguishable and not tp.distinguishable) 
-        if self.distinguishable:
-            return self.pi1.momentum.is_equal_to(tp.pi1.momentum) and self.pi2.momentum.is_equal_to(tp.pi2.momentum) and self.sign.is_negative_of(tp.sign)
-        else:
-            return (self.pi1.momentum.is_equal_to(tp.pi1.momentum) and self.pi2.momentum.is_equal_to(tp.pi2.momentum)\
-                    or self.pi2.momentum.is_equal_to(tp.pi1.momentum) and self.pi1.momentum.is_equal_to(tp.pi2.momentum)) and self.sign.is_negative_of(tp.sign)
-    def action(self,A):
-        self.pi1.action(A)
-        self.pi2.action(A)              # CAREFUL: no action on sign object, rather: update the sign
-        self.update()
-    def inverse_action(self,A):
-        self.pi1.inverse_action(A)
-        self.pi2.inverse_action(A)              # CAREFUL: no action on sign object, rather: update the sign
-        self.update()
+# class Two_Pion:
+#     def __init__(self,p1,p2, distinguishable = True):                               # initialize from two Pion objects 
+#             assert isinstance(p1,Pion) and isinstance(p2,Pion)
+#             self.pi1 = p1
+#             self.pi2 = p2
+#             self.sign = overall_sign([p1,p2])
+#             self.distinguishable = distinguishable
+#             self.update()
+#     def __lt__(self,tp):
+#         if abs(self.sign.num - tp.sign.num) < 1e-5:
+#             return self.pi1.momentum < tp.pi1.momentum
+#         return self.sign.num < tp.sign.num 
+#     def copy(self):
+#         np1 = self.pi1.copy()
+#         np2 = self.pi2.copy()
+#         dist = self.distinguishable
+#         new_tp = Two_Pion(np1,np2,dist)
+#         return new_tp
+#     def update(self):
+#         self.sign = overall_sign([self.pi1,self.pi2])
+#         self.name = str_sign(self.sign.num) + "[Pi(" + str(self.pi1.momentum.x) + "," + str(self.pi1.momentum.y) + "," + str(self.pi1.momentum.z) + ")"\
+#             + "_x_Pi(" + str(self.pi2.momentum.x) + "," + str(self.pi2.momentum.y) + "," + str(self.pi2.momentum.z) + ")]"
+#     def printname(self):
+#         self.update()
+#         print(self.name)
+#     def is_equal_to(self,tp):
+#         assert (self.distinguishable and tp.distinguishable) or (not self.distinguishable and not tp.distinguishable)        
+#         if self.distinguishable:
+#             return self.pi1.momentum.is_equal_to(tp.pi1.momentum) and self.pi2.momentum.is_equal_to(tp.pi2.momentum) and self.sign.is_equal_to(tp.sign)
+#         else:
+#             return (self.pi1.momentum.is_equal_to(tp.pi1.momentum) and self.pi2.momentum.is_equal_to(tp.pi2.momentum)\
+#                     or self.pi2.momentum.is_equal_to(tp.pi1.momentum) and self.pi1.momentum.is_equal_to(tp.pi2.momentum)) and self.sign.is_equal_to(tp.sign)
+#     def is_negative_of(self,tp):
+#         assert (self.distinguishable and tp.distinguishable) or (not self.distinguishable and not tp.distinguishable) 
+#         if self.distinguishable:
+#             return self.pi1.momentum.is_equal_to(tp.pi1.momentum) and self.pi2.momentum.is_equal_to(tp.pi2.momentum) and self.sign.is_negative_of(tp.sign)
+#         else:
+#             return (self.pi1.momentum.is_equal_to(tp.pi1.momentum) and self.pi2.momentum.is_equal_to(tp.pi2.momentum)\
+#                     or self.pi2.momentum.is_equal_to(tp.pi1.momentum) and self.pi1.momentum.is_equal_to(tp.pi2.momentum)) and self.sign.is_negative_of(tp.sign)
+#     def action(self,A):
+#         self.pi1.action(A)
+#         self.pi2.action(A)              # CAREFUL: no action on sign object, rather: update the sign
+#         self.update()
+#     def inverse_action(self,A):
+#         self.pi1.inverse_action(A)
+#         self.pi2.inverse_action(A)              # CAREFUL: no action on sign object, rather: update the sign
+#         self.update()
 
-def overall_sign(obj_list):                 # compute overall sign from all occurring Scalar or Pseudoscalars (or other) signs and return as Scalar or PseudoScalar object
-    S = 1
-    num_PS = 0
-    for obj in obj_list:
-        if hasattr(obj,"sign"):
-            if isinstance(obj.sign,Scalar):
-                S = S*obj.sign.num
-            if isinstance(obj.sign,PseudoScalar):
-                S = S*obj.sign.num
-                num_PS += 1
-        if isinstance(obj,numbers.Number):
-            assert obj in {-1,1}
-            S = obj*S
-            num = True
-    if num:
-        return S
-    if num_PS % 2:              # odd number of PseudoScalars
-        return PseudoScalar(S)
-    return Scalar(S)
-class Rho:
-    def __init__(self,momentum,struc = None):
-        if isinstance(momentum,Vector):
-            self.momentum = momentum
-        else:
-            assert len(momentum) == 3
-            self.momentum = Vector(momentum)
-        if struc == None:
-            self.vector_structure = Vector(["rho_x","rho_y","rho_z"])
-        elif isinstance(struc,Vector):
-            self.vector_structure = struc
-        else:
-            assert len(struc) == 3
-            self.vector_structure = Vector(struc)
-        self.update()
-    def __lt__(self,obj):               # ONLY use for sorting, not actual comparison
-        if not abs(coord_to_num(self.vector_structure.x) - coord_to_num(obj.vector_structure.x)) < 1e-5: 
-            return coord_to_num(self.vector_structure.x) < coord_to_num(obj.vector_structure.x)
-        elif not abs(coord_to_num(self.vector_structure.y) - coord_to_num(obj.vector_structure.y)) < 1e-5: 
-            return coord_to_num(self.vector_structure.y) < coord_to_num(obj.vector_structure.y)
-        elif not abs(coord_to_num(self.vector_structure.z) - coord_to_num(obj.vector_structure.z)) < 1e-5: 
-            return coord_to_num(self.vector_structure.z) < coord_to_num(obj.vector_structure.z)
-        return self.momentum < obj.momentum
-    def copy(self):
-        mom = self.momentum.copy()
-        struc = self.vector_structure.copy()
-        new_rho = Rho(mom,struc)
-        return new_rho
-    def update(self):
-        self.name = self.vector_structure.name + self.momentum.name[3:]
-    def printname(self):
-        self.update()
-        print(self.name)
-    def is_equal_to(self,R):
-        return self.vector_structure.is_equal_to(R.vector_structure) and self.momentum.is_equal_to(R.momentum)
-    def is_negative_of(self,R):
-        return self.vector_structure.is_negative_of(R.vector_structure) and self.momentum.is_equal_to(R.momentum)
-    def action(self,A):
-        self.vector_structure.action(A)
-        self.momentum.inverse_action(A)
-        self.update()
-    def inverse_action(self,A):
-        self.vector_structure.inverse_action(A)
-        self.momentum.action(A)
-        self.update()
+# def overall_sign(obj_list):                 # compute overall sign from all occurring Scalar or Pseudoscalars (or other) signs and return as Scalar or PseudoScalar object
+#     S = 1
+#     num_PS = 0
+#     for obj in obj_list:
+#         if hasattr(obj,"sign"):
+#             if isinstance(obj.sign,Scalar):
+#                 S = S*obj.sign.num
+#             if isinstance(obj.sign,PseudoScalar):
+#                 S = S*obj.sign.num
+#                 num_PS += 1
+#         if isinstance(obj,numbers.Number):
+#             assert obj in {-1,1}
+#             S = obj*S
+#             num = True
+#     if num:
+#         return S
+#     if num_PS % 2:              # odd number of PseudoScalars
+#         return PseudoScalar(S)
+#     return Scalar(S)
+
 class ScalarField:
     def __init__(self,momentum,struc = None):
         self.direction_action = "right"
@@ -775,6 +730,7 @@ class PseudoVectorField:                               # particle with: Lorentz 
             assert isinstance(momentum,Vector)
             self.momentum = momentum
 class TensorField:                      # Field operator(with momentum) that transforms like the spacial components of a rank-2 Lorentz-tensor T: T^{mu,nu} -> Lambda^{rho}_mu Lambda^{sigma}_nu T^{rho,sigma} 
+                                        # not yet used for anything
     def __init__(self,momentum,structure = None,sign = 1,symmetric = False,antisymmetric = False):
             self.lorentz_structure = "tensor"
             if isinstance(momentum,Vector):
@@ -844,16 +800,6 @@ class TensorProduct:       #UNFINISHED         # tensor product of arbitrary num
         if isinstance(self.obj[0],PseudoScalarField):
             return self.obj[0].momentum < t.obj[0].momentum
         return self.obj[0] < t.obj[0]
-        # i = 0
-        # while i in range(len(list(self.obj.values()))):
-        #     if self.obj[i] < t.obj[i]:
-        #         return True
-        #     if self.obj[i] > t.obj[i]:
-        #         return False
-        #     i += 1
-        # print("TensorProduct.__lt__: Comparison failed")
-        # return False
-
     def copy(self):
         temp = list(self.obj.values())
         new_obj = []

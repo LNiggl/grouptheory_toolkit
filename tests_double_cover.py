@@ -12,3 +12,7 @@ mt = o.mult_table_from_actions(ac)
 O = o.generate_group(gen_actions,v)
 
 print("# elements of O: ", len(O.elements))
+for k,v in O.mult_table.items():
+    if v == "Rot1":
+        print(v)
+        print(k)
