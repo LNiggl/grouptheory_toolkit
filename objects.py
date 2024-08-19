@@ -8,6 +8,7 @@ import groups as g
 # classes that directly know about their actions: Scalar, PseudoScalar, Vector 
 class Scalar:
     def __init__(self,n):
+        self.direction_action = "left"
         self.num = n
         self.update()
     def __len__(self):
@@ -47,6 +48,7 @@ class Scalar:
 
 class PseudoScalar:
     def __init__(self,n):
+        self.direction_action = "left"
         self.num = n
         self.update()
     def __len__(self):
@@ -97,6 +99,7 @@ class PseudoScalar:
 
 class Vector:
     def __init__(self,v):
+        self.direction_action = "left"
         assert len(v) == 3
         self.x = v[0]
         self.y = v[1]
@@ -154,21 +157,6 @@ class Vector:
                 self.x = minus(temp.y)
                 self.y = temp.x
                 self.z = temp.z
-            # if A == "Rot0":
-            #     temp = self.copy()
-            #     self.x = temp.x
-            #     self.y = temp.z
-            #     self.z = minus(temp.y)
-            # if A == "Rot1":
-            #     temp = self.copy()
-            #     self.x = minus(temp.z)
-            #     self.y = temp.y
-            #     self.z = temp.x
-            # if A == "Rot2":
-            #     temp = self.copy()
-            #     self.x = temp.y
-            #     self.y = minus(temp.x)
-            #     self.z = temp.z
             if A == "Inv":
                 temp = self.copy()
                 self.x = minus(temp.x)
@@ -211,6 +199,7 @@ class Vector:
  
 class PseudoVector:
     def __init__(self,v):
+        self.direction_action = "left"
         assert len(v) == 3
         self.x = v[0]
         self.y = v[1]
@@ -303,7 +292,117 @@ class PseudoVector:
         As = g.split(A)[::-1]               # the slicing reverses list as (AB)^-1 = B^-1 A^-1 
         for i in range(len(As)):
             self.inverse_gen_action(As[i]) 
-
+class Tensor:                               # (spacial components of a) Lorentz-Tensor T: T^{mu,nu} -> Lambda^{rho}_mu Lambda^{sigma}_nu T^{rho,sigma}
+    def __init__(self,struc = None,sign = None, symmetric = False, antisymmetric = False):          # attributes: tuple struc from {0,..2}_x_{0,..2}, int sign
+                                                                                                    # ONLY assign symm/antisymm via constructor
+        if struc == None:
+            self.idx1 = 0
+            self.idx2 = 0
+        else:
+            assert len(struc) == 2
+            self.idx1 = struc[0]
+            self.idx2 = struc[1]
+        if sign == None:
+            self.sign = 1
+        else:
+            assert isinstance(sign,numbers.Number)
+            self.sign = sign
+        assert not (symmetric and antisymmetric)
+        self.symmetric = symmetric
+        self.antisymmetric = antisymmetric
+        self.update()
+    def copy(self):
+        mu = self.idx1 + 0
+        nu = self.idx2 + 0
+        struc = [mu,nu]
+        sign = self.sign
+        symm = self.symmetric
+        antisymm = self.antisymmetric
+        new_ten = Tensor(struc,sign,symmetric = symm,antisymmetric = antisymm)
+        return new_ten   
+    def update(self):
+        self.name = str_sign(self.sign) + "Tensor{" + str(self.idx1) + "," + str(self.idx2) + "}"  
+        if self.symmetric:
+            self.name += "[symm.]"
+        if self.antisymmetric:
+            self.name += "[antisymm.]"
+    def printname(self):
+        self.update()
+        print(self.name)
+    def assign_idx_from_vecs(self,v1,v2):
+        S = 1
+        if not v1.x == 0:
+            if v1.x == -1:
+                S = S*(-1)
+            mu = 0
+        if not v1.y == 0:
+            if v1.y == -1:
+                S = S*(-1)
+            mu = 1
+        if not v1.z == 0:
+            if v1.z == -1:
+                S = S*(-1)
+            mu = 2
+        
+        if not v2.x == 0:
+            if v2.x == -1:
+                S = S*(-1)
+            nu = 0
+        if not v2.y == 0:
+            if v2.y == -1:
+                S = S*(-1)
+            nu = 1
+        if not v2.z == 0:
+            if v2.z == -1:
+                S = S*(-1)
+            nu = 2
+        self.sign = self.sign*S
+        self.idx1 = mu
+        self.idx2 = nu
+    def action(self,A):
+        v1 = idx_to_vec(self.idx1)
+        v2 = idx_to_vec(self.idx2)
+        v1.action(A)
+        v2.action(A)
+        self.assign_idx_from_vecs(v1,v2)
+        self.update()
+    def inverse_action(self,A):
+        v1 = idx_to_vec(self.idx1)
+        v2 = idx_to_vec(self.idx2)
+        v1.inverse_action(A)
+        v2.inverse_action(A)
+        self.assign_idx_from_vecs(v1,v2)
+        self.update()
+    def is_equal_to(self,t):     
+        assert isinstance(t,Tensor)     
+        if self.symmetric:    
+            assert t.symmetric          
+            return ((self.idx1 == t.idx1 and self.idx2 == t.idx2) or (self.idx1 == t.idx2 and self.idx2 == t.idx1)) and self.sign == t.sign
+        if self.antisymmetric:
+            assert t.antisymmetric
+            return (self.idx1 == t.idx1 and self.idx2 == t.idx2 and self.sign == t.sign) or (self.idx1 == t.idx2 and self.idx2 == t.idx1 and self.sign == -1*t.sign)
+        return self.idx1 == t.idx1 and self.idx2 == t.idx2 and self.sign == t.sign 
+    def is_negative_of(self,t):     
+        assert isinstance(t,Tensor)   
+        if self.symmetric:    
+            assert t.symmetric          
+            return ((self.idx1 == t.idx1 and self.idx2 == t.idx2) or (self.idx1 == t.idx2 and self.idx2 == t.idx1)) and self.sign == -1*t.sign
+        if self.antisymmetric:
+            assert t.antisymmetric
+            return (self.idx1 == t.idx1 and self.idx2 == t.idx2 and self.sign == -1*t.sign) or (self.idx1 == t.idx2 and self.idx2 == t.idx1 and self.sign == t.sign)                            
+        return self.idx1 == t.idx1 and self.idx2 == t.idx2 and self.sign == -1*t.sign   
+def idx_to_vec(n):                          # takes int from 0,1,2 and creates Vector object as basis vector in that direction
+    a1 = []
+    i = 0
+    assert n in {0,1,2}
+    while i < 3:
+        if i == n:
+            a1.append(1)                
+        else:
+            a1.append(0)
+        i += 1
+    v = Vector(a1)
+    return v
 
 def vector_sum(vecs):                       # input: list of Vector objects. Output: Vector object  
     x_tot = 0
@@ -420,6 +519,12 @@ def overall_sign(obj_list):                 # compute overall sign from all occu
             if isinstance(obj.sign,PseudoScalar):
                 S = S*obj.sign.num
                 num_PS += 1
+        if isinstance(obj,numbers.Number):
+            assert obj in {-1,1}
+            S = obj*S
+            num = True
+    if num:
+        return S
     if num_PS % 2:              # odd number of PseudoScalars
         return PseudoScalar(S)
     return Scalar(S)
@@ -470,6 +575,7 @@ class Rho:
         self.update()
 class ScalarField:
     def __init__(self,momentum,struc = None):
+        self.direction_action = "right"
         self.lorentz_structure = "scalar"
         if isinstance(momentum,Vector):
             self.momentum = momentum
@@ -509,6 +615,7 @@ class ScalarField:
         self.update()
 class PseudoScalarField:                               # particle with: Lorentz pseudoscalar structure (under rotations), momentum
     def __init__(self,momentum,struc = None):
+        self.direction_action = "right"
         self.lorentz_structure = "pseudoscalar"
         if isinstance(momentum,Vector):
             self.momentum = momentum
@@ -557,6 +664,7 @@ class PseudoScalarField:                               # particle with: Lorentz 
 
 class VectorField:                               # particle with: inner vector structure (under rotations), momentum
     def __init__(self,momentum,struc = None):
+        self.direction_action = "mixed"
         self.lorentz_structure = "vector"
         if isinstance(momentum,Vector):
             self.momentum = momentum
@@ -612,6 +720,8 @@ class VectorField:                               # particle with: inner vector s
 
 class PseudoVectorField:                               # particle with: Lorentz pseudovector structure (under rotations), momentum
     def __init__(self,momentum,struc = None):
+        self.direction_action = "mixed"
+        # for classes with "mixed": add function left_action, check for direction_action and use left_action for rep_functions as needed
         self.lorentz_structure = "pseudovector"
         if isinstance(momentum,Vector):
             self.momentum = momentum
@@ -664,7 +774,43 @@ class PseudoVectorField:                               # particle with: Lorentz 
         if not momentum == None:
             assert isinstance(momentum,Vector)
             self.momentum = momentum
-
+class TensorField:                      # Field operator(with momentum) that transforms like the spacial components of a rank-2 Lorentz-tensor T: T^{mu,nu} -> Lambda^{rho}_mu Lambda^{sigma}_nu T^{rho,sigma} 
+    def __init__(self,momentum,structure = None,sign = 1,symmetric = False,antisymmetric = False):
+            self.lorentz_structure = "tensor"
+            if isinstance(momentum,Vector):
+                self.momentum = momentum
+            else:
+                assert len(momentum) == 3
+                self.momentum = Vector(momentum)
+            if isinstance(structure,Tensor):
+                self.structure = structure
+            else:
+                self.structure = Tensor(struc = structure,sign = sign, symmetric = symmetric,antisymmetric = antisymmetric)
+            self.update()
+    def copy(self):
+        mom = self.momentum.copy()
+        struc = self.structure.copy()
+        new_t = TensorField(mom,struc)
+        return new_t
+    def update(self):
+        self.structure.update()
+        self.momentum.update()
+        self.name = "TensorField" + self.structure.name[7:] + "(p=" + self.momentum.name[4:]
+    def printname(self):
+        self.update()
+        print(self.name)
+    def is_equal_to(self,R):
+        return self.structure.is_equal_to(R.structure) and self.momentum.is_equal_to(R.momentum)
+    def is_negative_of(self,R):
+        return self.structure.is_negative_of(R.structure) and self.momentum.is_equal_to(R.momentum)
+    def action(self,A):
+        self.structure.action(A)
+        self.momentum.inverse_action(A)
+        self.update()
+    def inverse_action(self,A):
+        self.structure.inverse_action(A)
+        self.momentum.action(A)
+        self.update()
 class LinearCombination:    # UNFINISHED
     def __init__(self,basis,weights,linear_dep = True):                       # list of weights of each element in basis; basis: list of objects, e.g. of class <Vector>; 
                                                                             # ! all objects in basis are assumed to be linearly independent
@@ -690,17 +836,23 @@ class TensorProduct:       #UNFINISHED         # tensor product of arbitrary num
         for i in range(len(v)):
             self.obj[i] = v[i]
         self.distinguishable = distinguishable
+        if not all(self.obj[i].direction_action == self.obj[0].direction_action for i in range(len(v))):
+            print("action direction problem")
+        self.direction_action = self.obj[0].direction_action
         self.update()
     def __lt__(self,t):                         # only for sorting purposes
-        i = 0
-        while i in range(len(list(self.obj.values()))):
-            if self.obj[i] < t.obj[i]:
-                return True
-            if self.obj[i] > t.obj[i]:
-                return False
-            i += 1
-        print("TensorProduct.__lt__: Comparison failed")
-        return False
+        if isinstance(self.obj[0],PseudoScalarField):
+            return self.obj[0].momentum < t.obj[0].momentum
+        return self.obj[0] < t.obj[0]
+        # i = 0
+        # while i in range(len(list(self.obj.values()))):
+        #     if self.obj[i] < t.obj[i]:
+        #         return True
+        #     if self.obj[i] > t.obj[i]:
+        #         return False
+        #     i += 1
+        # print("TensorProduct.__lt__: Comparison failed")
+        # return False
 
     def copy(self):
         temp = list(self.obj.values())

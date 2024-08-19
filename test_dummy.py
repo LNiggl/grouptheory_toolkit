@@ -66,42 +66,6 @@ print("Character table of O_h:")
 for irrep in O_h.char_table.keys():
     print(irrep, ": " , O_h.char_table[irrep])
 
-vp1 = o.VectorField([1,0,0],[1,0,0])
-vp2 = o.VectorField([0,1,0],[0,1,0])
-vp3 = o.VectorField([0,0,1],[0,0,1])
-print("Basis")
-vpo = o.generate_basis([vp1,vp2,vp3],O_h,drop_sign = True)
-o.print_all(vpo)
-print("# ", len(vpo))
-exb = o.exhaustive_orbit(vp1,O_h)
-exb.sort(reverse = True)
-exb2 = o.remove_neg(exb)
-o.print_all(exb2)
-print("# ", len(exb2))
-
-vv = o.Pion([1,0,0],"-")
-exv = o.exhaustive_orbit(vv,O_h)
-exv.sort(reverse = True)
-o.print_all(exv)
-print("# ", len(exv))
-
-vp1 = o.VectorField([1,0,0],[1,0,0])
-vpp = o.generate_basis(vp1,O_h,drop_sign = True)
-o.print_all(vpp)
-
-vvv = o.Vector([1,0,0])
-vv2 = o.Vector([-1,0,0])
-print(vvv.is_negative_of(vv2))
-vvx = o.generate_basis(vvv,O_h)
-o.print_all(vvx)
-
-pv = o.PseudoVectorField([1,0,0])
-pv2 = o.PseudoVectorField([1,0,0],struc = [-1,0,0])
-o.print_all([pv,pv2])
-print(pv.structure.name, pv2.structure.name, pv.momentum.name,pv2.momentum.name)
-
-print(pv.is_negative_of(pv2))
-
 # dummy instances
 s1 = o.Scalar(1)
 s2 = o.Scalar(-1)
@@ -112,171 +76,167 @@ ps2 = o.PseudoScalar(-1)
 v1 = o.Vector([1,0,0])
 v2 = o.Vector([-1,0,0])
 v3 = o.Vector([2,0,0])
+ten_v = o.TensorProduct(v1,v2)
 
 pv1 = o.PseudoVector([1,0,0])
 pv2 = o.PseudoVector([-1,0,0])
 
-sf1 = o.ScalarField([1,0,0])
-sf2 = o.ScalarField([-1,0,0])
+sf1 = o.ScalarField([0,0,0])
+sf2 = o.ScalarField([1,0,0])
+sf3 = o.ScalarField([-1,0,0])
+ten_sf = o.TensorProduct(sf2,sf3)
 
-psf1 = o.PseudoScalarField([1,0,0],struc = 1)
-psf2 = o.PseudoScalarField([-1,0,0], struc = 1)
+psf1 = o.PseudoScalarField([0,0,0],struc = 1)
+psf2 = o.PseudoScalarField([1,0,0], struc = 1)
+psf3 = o.PseudoScalarField([-1,0,0],struc = 1)
+ten_psf = o.TensorProduct(psf2,psf3,distinguishable=False)
 
-vf1 = o.VectorField([1,0,0],struc = [1,0,0])
-vf2 = o.VectorField([1,0,0],struc = [-1,0,0])
+vf1 = o.VectorField([0,0,0],struc = [1,0,0])
+vf2 = o.VectorField([1,0,0],struc = [1,0,0])
+vf3 = o.VectorField([-1,0,0],struc = [1,0,0])
+ten_vf = o.TensorProduct(vf2,vf3)
 
-pvf1 = o.PseudoVectorField([1,0,0],struc = [1,0,0])
-pvf2 = o.PseudoVectorField([1,0,0],struc = [-1,0,0])
+pvf1 = o.PseudoVectorField([0,0,0],struc = [1,0,0])
+pvf2 = o.PseudoVectorField([1,0,0],struc = [1,0,0])
+pvf3 = o.PseudoVectorField([-1,0,0],struc = [1,0,0])
+ten_pvf = o.TensorProduct(pvf2,pvf3)
 
 object_list = [s1,s2,ps1,ps2,v1,v2,pv1,pv2,sf1,sf2,psf1,psf2,vf1,vf2,pvf1,pvf2]
 
-ten1 = o.TensorProduct(v1,v2,distinguishable=False)
-ten2 = o.TensorProduct(v2,v2,distinguishable=False)
-ten3 = o.TensorProduct(v2,v1)
-ten4 = o.TensorProduct(v2,v1)
-
 v_basis = o.generate_basis(v1,O_h)
-v_rep = r.rep_from_action(O_h,v_basis,"testrep")
-print(v_rep.hom["Rot2"])
+v_rep = r.rep_from_action(O_h,v_basis,"v_rep")
 v_rep.check_if_homomorphism()
+print("V_Rep Rot0:")
+print(v_rep.hom["Rot0"])
+print("V_Rep Rot1:")
+print(v_rep.hom["Rot1"])
+print("V_Rep Rot2:")
+print(v_rep.hom["Rot2"])
 
-ten1.printname()
-print("test orbit")
-oten = o.orbit(ten1,O_h)
-o.print_all(oten)
-print("orbit of ", ten3.name)
-oten3 = o.orbit(ten3,O_h)
-o.print_all(oten3)
-b_ten3 = o.generate_basis(ten3,O_h)
-print("basis of ten3")
-o.print_all(b_ten3)
+ps_basis = o.generate_basis(ps1,O_h)
+ps_rep = r.rep_from_action(O_h,ps_basis,"ps_rep")
+ps_rep.check_if_homomorphism()
 
-ten_psf = o.TensorProduct(psf1,psf2)
-b_psf = o.generate_basis(ten_psf,O_h)
-print("basis of ten_sf")
-o.print_all(b_psf)
-psf_rep = r.rep_from_action(O_h,b_psf,"pseudoscalarfield_rep")
-psf_rep.check_if_homomorphism()
-# print(psf_rep.hom["Rot2"])
-# print(np.matmul(psf_rep.hom["Rot2"],psf_rep.hom["Rot1"]))
-# print(O_h.mult_table["Rot1"]["Rot2"])
-# print(psf_rep.hom["Rot2Rot0"])
-# psf_rep.check_if_homomorphism2()
-r.study_irreps(psf_rep,O_h,"../results/PseudoScalarField_100_irreps.txt")
+pv_basis = o.generate_basis(pv1,O_h)
+pv_rep = r.rep_from_action(O_h,pv_basis,"pv_rep")
+pv_rep.check_if_homomorphism()
 
-psf3 = o.PseudoScalarField([1,1,0],struc = 1)
-psf4 = o.PseudoScalarField([-1,-1,0], struc = 1)
+print("scalarfield rep with right action")
+print("action direction: ", sf2.direction_action)
+sf_basis = o.generate_basis(sf2,O_h)
+sf_rep = r.rep_from_action(O_h,sf_basis,"sf_rep")
+sf_rep.check_if_homomorphism()
 
-# ten_psf2 = o.TensorProduct(psf3,psf4)
-# b_psf2 = o.generate_basis(ten_psf2,O_h)
-# print("basis of ten_sf2")
-# o.print_all(b_psf2)
-# psf_rep2 = r.rep_from_action(O_h,b_psf2,"pseudoscalarfield_rep")
-# print(psf_rep2.hom["Inv"])
-# psf_rep2.check_if_homomorphism()
-# r.study_irreps(psf_rep2,O_h,"../results/PseudoScalarField_110_irreps.txt")
+# psf_basis = o.generate_basis(psf1,O_h)
+# psf_rep = r.rep_from_action(O_h,psf_basis,"psf_rep")
+# psf_rep.check_if_homomorphism()
+
+# vf_basis = o.generate_basis(vf1,O_h)
+# vf_rep = r.rep_from_action(O_h,vf_basis,"vf_rep")
+# vf_rep.check_if_homomorphism()
+
+# pvf_basis = o.generate_basis(pvf1,O_h)
+# pvf_rep = r.rep_from_action(O_h,pvf_basis,"pvf_rep")
+# pvf_rep.check_if_homomorphism()
+print("tensor product reps")
+b_ten_v = o.generate_basis(ten_v,O_h)
+rep_ten_v = r.rep_from_action(O_h,b_ten_v,"rep_ten_v")
+print("action direction of ",rep_ten_v.name , ": " , b_ten_v[0].direction_action)
+rep_ten_v.check_if_homomorphism()
+
+b_ten_sf = o.generate_basis(ten_sf,O_h)
+rep_ten_sf = r.rep_from_action(O_h,b_ten_sf,"rep_ten_sf")
+print("action direction of ",rep_ten_sf.name , ": " , b_ten_sf[0].direction_action)
+rep_ten_sf.check_if_homomorphism()
+
+# b_ten_psf = o.generate_basis(ten_psf,O_h)
+# rep_ten_psf = r.rep_from_action(O_h,b_ten_psf,"rep_ten_psf")
+# rep_ten_psf.check_if_homomorphism()
+
+b_ten_vf = o.generate_basis(ten_vf,O_h)
+rep_ten_vf = r.rep_from_action(O_h,b_ten_vf,"rep_ten_vf")
+# rep_ten_vf.check_if_homomorphism2()
+
+b_ten_pvf = o.generate_basis(ten_pvf,O_h)
+rep_ten_pvf = r.rep_from_action(O_h,b_ten_pvf,"rep_ten_pvf")
+print("action direction of ",rep_ten_pvf.name , ": " , b_ten_pvf[0].direction_action)
+rep_ten_pvf.check_if_homomorphism()
+
+# test associativity axiom for group action on PseudoScalarField
+A = "Rot1"
+B = "Rot2"
+
+
+# print("test associativity of PseudoscalarField_x_PseudoscalarField action under ", A , B, " and the product ", O_h.mult_table[A][B])
+# print("subsequent actions")
+# ten_psf_c = ten_psf.copy()
+# ten_psf.printname()
+# ten_psf.action(B)
+# print("->")
+# ten_psf.printname()
+# ten_psf.action(A)
+# print("->")
+# ten_psf.printname()
+# print("action of (", A,B, "):")
+# ten_psf_c.printname()
+# ten_psf_c.action(O_h.mult_table[A][B])
+# print("->")
+# ten_psf_c.printname()
+
+# print("vector_x_vector actions to build rank-2 lorentz tensor:")
+# A = "Rot0"
+t0 = o.Vector([1,0,0])
+t1 = o.Vector([0,1,0])
+t2 = o.Vector([0,0,1])
+
+T00 = o.TensorProduct(t0,t0)
+T10 = o.TensorProduct(t1,t0)
+T20 = o.TensorProduct(t2,t0)
+
+T01 = o.TensorProduct(t0,t1)
+T11 = o.TensorProduct(t1,t1)
+T21 = o.TensorProduct(t2,t1)
+
+T02 = o.TensorProduct(t0,t2)
+T12 = o.TensorProduct(t1,t2)
+T22 = o.TensorProduct(t2,t2)
+
+list_t = [T00,T01,T02,T10,T11,T12,T20,T21,T22]
+# print("action of ", A)
+# for Ten in list_t:
+#     T = Ten.copy()
+#     T.printname()
+#     print("->")
+#     T.action(A)
+#     T.printname()
+#     print("----")
+
+# print("test tensor")
+# X = o.Tensor([1,2],sign = -1,antisymmetric=True)
+# X.printname()
+# Y = X.copy()
+# Y.action("Rot0")
+# Y.sign = -1
+# Y.printname()
+# print(Y.is_equal_to(X))
+# print(Y.is_negative_of(X))
+
+
+# T = o.TensorField([1,0,0],structure = [1,2],sign = -1,antisymmetric = True)
+# T.printname()
+# T2 = T.copy()
+# T2.structure.idx1 = 2
+# T2.structure.idx2 = 1
+# T2.momentum.x = 1
+# T.printname()
+# T2.printname()
+# print(T2.is_equal_to(T))
+# print(T2.is_negative_of(T))
+# T2.action("Rot2")
+# T2.printname()
 
 
 
-
-
-# print("test is_equal")
-# print(ten3.is_equal_to(ten4))
-# print(ten1.is_equal_to(ten2))
-# print(ten1.is_negative_of(ten2))
-# pairs = ten1.pair_up(ten2)
-# print("pairs")
-# if pairs == None:
-#     print("none")
-# else:
-#     for p in pairs[0]:
-#         o.print_all(p)
-#         print("\n")
-#     print("n_sign_diff ", pairs[1])
-
-
-# for x in object_list:
-#     x.printname()
-
-# v = o.Vector([1,0,0])
-# b_v = o.generate_basis([v],O_h) 
-# V_Rep = r.rep_from_action(O_h,b_v,"V_Rep")
-# # print("General Vector Basis")
-# # o.print_all(V_Rep.basis)
-# # print("# ",len(V_Rep.basis))
-# V_x_V_Rep =r.product_rep(V_Rep,V_Rep)
-# print("product basis VxV")
-# o.print_all(V_x_V_Rep.basis.values())
-# V_red = r.find_irreps(V_x_V_Rep,O_h)
-# print("diag traceless projector:")
-# P = np.matmul(r.traceless_projector(3),r.diagonal_projector(3))
-# print(P)
-# P_V_x_V_eigvecs = r.list_nonzero_eigvecs(np.matmul(V_x_V_Rep.hom["Rot2"],P))
-# print("EIgenvectors of P:")
-# print(P_V_x_V_eigvecs)
-# print("after applying P to VxV:")
-# # r.apply_projectors([r.traceless_projector,r.diagonal_projector],V_x_V_Rep)
-# print("test: rotate A -> B and compare with result: EV of Rot1")
-# print("Rotate A via Rot0")
-# for k,v in P_V_x_V_eigvecs.items():
-#     # print(v)
-#     x = np.matmul(v[0].T,V_x_V_Rep.hom["Rot0"]).T
-#     print(k,x)
-# print("B from EV of Rot1P")
-# P_V_x_V_eigvecs_y = r.list_nonzero_eigvecs(np.matmul(V_x_V_Rep.hom["Rot1"],P))
-# print(P_V_x_V_eigvecs_y)
-
-# print("Compare to E in two-pion system")
-# p1 = o.Pion([1,0,0],"+")
-# p2 = o.Pion([-1,0,0],"+")
-
-# # Two Pions, distinguishable
-# tp1 = o.Two_Pion(p1,p2)
-# b_tp = o.generate_basis([tp1],O_h) 
-# print("TP1 Basis: (1,0,0)-type single momenta")
-# o.print_all(b_tp)
-# print("# ", len(b_tp))
-# TP_Rep1 = r.rep_from_action(O_h,b_tp,"TP_Rep1")
-
-# TP_red1 = r.find_irreps(TP_Rep1,O_h)
-
-# # vectors that span Ep:
-# P_TP1_Ep = TP_red1["Ep"]
-# print("projector to E of Two_Pion")
-# print(P_TP1_Ep[0])
-# TP1_Ep_vecs = r.list_nonzero_eigvecs(np.matmul(TP_Rep1.hom["Rot2"],P_TP1_Ep[0]))
-# print("eigenvectors:")
-# print(TP1_Ep_vecs)
-
-# result = r.E_identify_components(P_TP1_Ep,TP_Rep1)
-# print(result)
-
-# #vectors that span T2:
-# P_T2p = V_red["T2p"]
-# o.print_all(V_x_V_Rep.basis.values())
-# print("projector to T2p")
-# print(P_T2p[0])
-# print(V_x_V_Rep.hom["Rot2"])
-# print(np.matmul(V_x_V_Rep.hom["Rot2"],P_T2p[0]))
-# T2p_eig = r.list_nonzero_eigvecs(P_T2p[0])
-# print(T2p_eig)
-# T2p_vec_a = r.list_nonzero_eigvecs(np.matmul(V_x_V_Rep.hom["Rot2"],P_T2p[0]))
-# print("vector a of T2")
-# print(T2p_vec_a)
-# print("Rotate a via Rot0 to b")
-# for k,v in T2p_vec_a.items():
-#     if abs(k+1)<1e-8:
-#         x = v[0]
-# x = np.matmul(V_x_V_Rep.hom["Rot0"],x)
-# print(x)
-# print("rotate b again to -a")
-# x = np.matmul(V_x_V_Rep.hom["Rot0"],x)
-# print(x)
-# T2p_vec_b = r.list_nonzero_eigvecs(np.matmul(V_x_V_Rep.hom["Rot1"],P_T2p[0]))
-# print("compare to eigenvalue -1 from Roty*projection")
-# print(T2p_vec_b)
-# vecs = r.T2_identify_components(P_T2p,V_x_V_Rep)
-# print(vecs)
 
 
 

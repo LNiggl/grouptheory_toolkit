@@ -39,13 +39,11 @@ class Representation(g.Group):
     # def check_if_homomorphism2(self):
     #     for g in self.elements:
     #         for h in self.elements:
-    #             eps = np.linalg.norm(np.matmul(self.hom[g],self.hom[h]) - self.hom[self.mult_table[g][h]])
-    #             print(g,h)
+    #             eps = np.linalg.norm(np.matmul(self.hom[h],self.hom[g]) - self.hom[self.mult_table[g][h]])
+    #             # print(g,h)
     #             assert eps < 1e-13
     def is_reducible(self):
-        return g.inner_product(self.characters,self.characters,self.group) - 1 > 1e-5
-
-    
+        return g.inner_product(self.characters,self.characters,self.group) - 1 > 1e-5    
 
     def round_chars(self):
         for c,chi in self.characters.items():
@@ -65,7 +63,9 @@ def matrix_from_action(A,basis):
             if basis[j].is_equal_to(acted_basis[i]):               # "if e_i gets transformed to e_j via action A" -> ge_i = M(A)_{ji} e_j == +/- e_j
                 M[j][i] = 1                                     # --> M(A)_{ji} == +/- 1
             if basis[j].is_negative_of(acted_basis[i]):
-                M[j][i] = -1                
+                M[j][i] = -1
+    if basis[0].direction_action == "right":
+        M = M.T
     return M
 
 def hom_from_action(group,basis):                                   # returns the dict for Rep.hom
@@ -74,6 +74,7 @@ def rep_from_action(group,basis,name):
     hom = hom_from_action(group,basis)
     Gamma = Representation(group,hom,name)
     Gamma.basis = basis
+    Gamma.direction_action = basis[0].direction_action
     return Gamma        
 def rep_trivial(group):
     return {g: np.matrix([1]) for g in group.elements}                  #returns dict of the homomorphism
@@ -248,9 +249,8 @@ def find_irreps(rep,group):             # Representation and Group objects -> di
                 print(irrep, "-> occurrence: 1") 
                 c_dim += temp.characters["I"]
             result[irrep] = [P,temp.characters["I"] / chars["I"]]
-            # result[irrep].append(temp.characters["I"] / chars["I"])
     print("sum of dims: ",  c_dim)
-    print("end find_irreps ",rep.name )
+    print("end find_irreps ",rep.name)
     return result
 
 def list_eigvecs(M,e):                  # Matrix M and eigenvalue e -> list of eigenvectors for this eigenvalue
@@ -352,10 +352,17 @@ def T1_identify_components(P,Rep):          # P = [proj,mult] -> dict {"x" : v o
             components["x"] = ev_x[e]
     components["y"] = []
     components["z"] = []
-    for x in components["x"]:
-        y = np.matmul(Rep.hom["Rot2"],x)
-        components["y"].append(y)                                        # if above statement holds and x is like x component of T1, then it should rotate to y
-        components["z"].append(np.matmul(Rep.hom["Rot0"],y))
+    
+    if Rep.direction_action == "left":
+        for x in components["x"]:
+            y = np.matmul(Rep.hom["Rot2"],x)
+            components["y"].append(y)
+            components["z"].append(np.matmul(Rep.hom["Rot0"],y))
+    elif Rep.direction_action == "right":
+        for x in components["x"]:
+            y = np.matmul(Rep.hom["Rot2"].T,x)
+            components["y"].append(y)
+            components["z"].append(np.matmul(Rep.hom["Rot0"].T,y)) # if above statement holds and x is like x component of T1, then it should rotate to y
     return components
 
 def E_identify_components(P,Rep):          # P = [proj,mult] -> dict {"xx-yy": .., "xx-zz": ..} such that same array entries, e.g. dict["x"][0],dict["y"][0],.. form an inv. subspace
@@ -365,8 +372,12 @@ def E_identify_components(P,Rep):          # P = [proj,mult] -> dict {"xx-yy": .
         if abs(e+1)< 1e-8:
             components["xx-yy"] = P_orientation[e]
     components["xx-zz"] = []
+    # if Rep.direction_action == "left":
     for x in components["xx-yy"]:
         components["xx-zz"].append(np.matmul(Rep.hom["Rot0"],x))                # rotate xx-yy to xx-zz
+    # elif Rep.direction_action == "right":
+    #     for x in components["xx-yy"]:
+    #         components["xx-zz"].append(np.matmul(Rep.hom["Rot0"].T,x))                # rotate xx-yy to xx-zz
     return components
 
 def T2_identify_components(P,Rep):          # P = [proj,mult] -> dict {"xx-yy": .., "xx-zz": ..} such that same array entries, e.g. dict["x"][0],dict["y"][0],.. form an inv. subspace
@@ -377,10 +388,16 @@ def T2_identify_components(P,Rep):          # P = [proj,mult] -> dict {"xx-yy": 
             components["xy+yx"] = P_orientation[e]
     components["xz+zx"] = []
     components["yz+zy"] = [] 
+    # if Rep.direction_action == "left":
     for a in components["xy+yx"]:
         components["xz+zx"].append(np.matmul(Rep.hom["Rot0"],a))                # rotate xy+yx to xz+zx   
     for b in components["xz+zx"]:
         components["yz+zy"].append(np.matmul(Rep.hom["Rot2"],b))                # rotate xz+zx to yz+zy
+    # elif Rep.direction_action == "right":
+    #     for a in components["xy+yx"]:
+    #         components["xz+zx"].append(np.matmul(Rep.hom["Rot0"].T,a))                # rotate xy+yx to xz+zx   
+    #     for b in components["xz+zx"]:
+    #         components["yz+zy"].append(np.matmul(Rep.hom["Rot2"].T,b))                # rotate xz+zx to yz+zy
     return components
 def study_irreps(rep,group,filename):                               # find all irreps(like find_irreps()), then decompose all subspaces and write results to file; 
                                                                     # filename: absolute or relative path, must end in desired format,e.g. ".txt" 
