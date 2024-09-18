@@ -6,6 +6,8 @@ import groups as g
 # -action and inverse_action should require minimal group theoretical/group specific information
 # -these objects are used by the functions in representations.py to create representations as Representation objects
 # classes that directly know about their actions: Scalar, PseudoScalar, Vector, Tensor 
+num_tol = 1e-8
+num_rtol = 1e-5
 class Scalar:
     def __init__(self,n):
         self.direction_action = "left"
@@ -28,12 +30,12 @@ class Scalar:
             if self.num == s.num:
                 return True
             if isinstance(self.num,numbers.Number) and isinstance(s.num,numbers.Number):
-                return abs(self.num - s.num) < 1e-6
+                return abs(self.num - s.num) < num_tol
             return False
         if self.num == s:
             return True
         if isinstance(self.num,numbers.Number) and isinstance(s,numbers.Number):
-                return abs(self.num - s) < 1e-6
+                return abs(self.num - s) < num_tol
         return False
     def is_negative_of(self,s):        
         if isinstance(s,Scalar):
@@ -68,12 +70,12 @@ class PseudoScalar:
             if self.num == s.num:
                 return True
             if isinstance(self.num,numbers.Number) and isinstance(s.num,numbers.Number):
-                return abs(self.num - s.num) < 1e-6
+                return abs(self.num - s.num) < num_tol
             return False
         if self.num == s:
             return True
         if isinstance(self.num,numbers.Number) and isinstance(s,numbers.Number):
-                return abs(self.num - s) < 1e-6
+                return abs(self.num - s) < num_tol
         return False
     def is_negative_of(self,s):        
         if isinstance(s,PseudoScalar):
@@ -108,12 +110,12 @@ class Vector:
     def __len__(self):
         return 3
     def __lt__(self,obj):               # ONLY use for sorting, not actual comparisons
-        if self.x < obj.x and not abs(self.x - obj.x) < 1e-5:
+        if self.x < obj.x and not abs(self.x - obj.x) < num_tol:
             return True
-        elif abs(self.x - obj.x) < 1e-5:
+        elif abs(self.x - obj.x) < num_tol:
             if self.y < obj.y:
                 return True 
-            elif abs(self.y - obj.y) < 1e-5 and self.z < obj.z:
+            elif abs(self.y - obj.y) < num_tol and self.z < obj.z:
                 return True 
         return False
     def copy(self):
@@ -132,7 +134,7 @@ class Vector:
             return True
         if all([isinstance(self.x,numbers.Number),isinstance(self.y,numbers.Number),isinstance(self.z,numbers.Number),\
                 isinstance(v.x,numbers.Number),isinstance(v.y,numbers.Number),isinstance(v.z,numbers.Number)]):
-            return np.allclose([self.x,self.y,self.z],[v.x,v.y,v.z], rtol = 1e-5, atol = 1e-10)
+            return np.allclose([self.x,self.y,self.z],[v.x,v.y,v.z], rtol = num_rtol, atol = num_tol)
         return False
     def is_negative_of(self,nv):
         v = nv.copy()    
@@ -208,12 +210,12 @@ class PseudoVector:
     def __len__(self):
         return 3
     def __lt__(self,obj):               # ONLY use for sorting, not actual comparisons
-        if self.x < obj.x and not abs(self.x - obj.x) < 1e-5:
+        if self.x < obj.x and not abs(self.x - obj.x) < num_tol:
             return True
-        elif abs(self.x - obj.x) < 1e-5:
+        elif abs(self.x - obj.x) < num_tol:
             if self.y < obj.y:
                 return True 
-            elif abs(self.y - obj.y) < 1e-5 and self.z < obj.z:
+            elif abs(self.y - obj.y) < num_tol and self.z < obj.z:
                 return True 
         return False
     def copy(self):
@@ -232,7 +234,7 @@ class PseudoVector:
             return True
         if all([isinstance(self.x,numbers.Number),isinstance(self.y,numbers.Number),isinstance(self.z,numbers.Number),\
                 isinstance(v.x,numbers.Number),isinstance(v.y,numbers.Number),isinstance(v.z,numbers.Number)]):
-            return np.allclose([self.x,self.y,self.z],[v.x,v.y,v.z], rtol = 1e-5, atol = 1e-10)
+            return np.allclose([self.x,self.y,self.z],[v.x,v.y,v.z], rtol = num_rtol, atol = num_tol)
         return False
     def is_negative_of(self,nv):
         v = nv.copy()    
@@ -412,7 +414,80 @@ def vector_sum(vecs):                       # input: list of Vector objects. Out
         y_tot += v.y
         z_tot += v.z
     return Vector([x_tot,y_tot,z_tot])
-
+class L_Spinor:                                     #\psi_L (see P/S section 3.2) as two-component, C-valued object
+                                                    # note from Wettig GT, ch. 7.3: Dirac spinor \psi = (\psi_L,\psi_R) transforms in (0,1/2)_x_(1/2,0): irrep iff parity is included
+                                                    # therefore: the usefulness of this class might vary 
+    def __init__(self,a,b):
+        self.direction_action = "left"
+        self.a = np.complex(a)
+        self.b = np.complex(b)
+        self.update()
+    def copy(self):
+        c = self.a
+        d = self.b
+        new_s = L_Spinor(c,d)
+        return new_s
+    def update(self):
+        self.name = "L_Spinor{" + str(self.a) + "," + str(self.b) + "}"  
+    def printname(self):
+        self.update()
+        print(self.name)    
+    def gen_action(self,A):             # implement parity when known how to
+        if A == "A0":
+            temp = self.copy()
+            self.a = (1/np.sqrt(2))*(temp.a - 1j*temp.b)
+            self.b = (1/np.sqrt(2))*(-1j*temp.a + temp.b)
+        if A == "A1":
+            temp = self.copy()
+            self.a = (1/np.sqrt(2))*(temp.a - temp.b)
+            self.b = (1/np.sqrt(2))*(temp.a + temp.b)
+        if A == "A1":
+            temp = self.copy()
+            self.a = (1/np.sqrt(2))*(1-1j)*temp.a
+            self.b = (1/np.sqrt(2))*(1+1j)*temp.b
+    def action(self,A):
+        As = g.split(A)
+        for i in range(len(As)):
+            self.gen_action(As[i]) 
+    def inverse_gen_action(self,A):
+        if A == "A0":
+            temp = self.copy()
+            self.a = (1/np.sqrt(2))*(temp.a + 1j*temp.b)
+            self.b = (1/np.sqrt(2))*(1j*temp.a + temp.b)
+        if A == "A1":
+            temp = self.copy()
+            self.a = (1/np.sqrt(2))*(temp.a + temp.b)
+            self.b = (1/np.sqrt(2))*(-temp.a + temp.b)
+        if A == "A1":
+            temp = self.copy()
+            self.a = (1/np.sqrt(2))*(1+1j)*temp.a
+            self.b = (1/np.sqrt(2))*(1-1j)*temp.b
+    def inverse_action(self,A):
+        As = g.split(A)[::-1]               # the slicing reverses list as (AB)^-1 = B^-1 A^-1 
+        for i in range(len(As)):
+            self.inverse_gen_action(As[i])
+    def is_equal_to(self,s):
+        return (abs(self.a-s.a)< num_tol and abs(self.b-s.b) < num_tol)
+    def is_negative_of(self,s):
+        return (abs(self.a+s.a)< num_tol and abs(self.b+s.b) < num_tol)
+    def lin_factor(self,s2):                 #returns scalar factor k such that self*k = s2; if not linearly dependent in that way, return None
+        if self.is_equal_to(s2):
+            return 1
+        # if (abs(s2.a)<num_tol and abs(s2.b)<num_tol):       #case s2 == (0,0) 
+        #     if (abs(self.a) < num_tol and abs(self.b) < num_tol):       # self == (0,0)
+        #         return 1
+        #     return None
+        if not abs(self.a) < num_tol:       # case self.a != 0
+            k =  s2.a/self.a
+        elif not abs(self.b) < num_tol:     #case self.b != 0
+            k = s2.b/self.b       
+        else:                               #case self == (0,0) and they aren´t equal
+            return None                                                   
+        scaled_s = L_Spinor(k*self.a,k*self.b)
+        if scaled_s.is_equal_to(s2):
+            return k
+        return None
+        
 # class Pion:
 #     def __init__(self,momentum,sign):        
 #         if isinstance(momentum,Vector):
@@ -434,7 +509,7 @@ def vector_sum(vecs):                       # input: list of Vector objects. Out
 #     def __lt__(self,p):                         # ONLY use for sorting, no comparison
 #         if self.sign.num < p.sign.num:
 #             return True
-#         elif abs(self.sign.num - p.sign.num) < 1e-5:            
+#         elif abs(self.sign.num - p.sign.num) < num_tol:            
 #             return self.momentum < p.momentum
 #         return False
 #     def update(self):
@@ -469,7 +544,7 @@ def vector_sum(vecs):                       # input: list of Vector objects. Out
 #             self.distinguishable = distinguishable
 #             self.update()
 #     def __lt__(self,tp):
-#         if abs(self.sign.num - tp.sign.num) < 1e-5:
+#         if abs(self.sign.num - tp.sign.num) < num_tol:
 #             return self.pi1.momentum < tp.pi1.momentum
 #         return self.sign.num < tp.sign.num 
 #     def copy(self):
@@ -767,22 +842,23 @@ class TensorField:                      # Field operator(with momentum) that tra
         self.structure.inverse_action(A)
         self.momentum.action(A)
         self.update()
-class LinearCombination:    # UNFINISHED
-    def __init__(self,basis,weights,linear_dep = True):                       # list of weights of each element in basis; basis: list of objects, e.g. of class <Vector>; 
-                                                                            # ! all objects in basis are assumed to be linearly independent
-        self.basis = basis
-        self.linear_dep = linear_dep                                            # True: treat -obj and obj as linearly dependent; False: treat as linearly independent
-        self.lin_comb = []
-        assert len(basis) == len(weights)
-        for i in range(len(basis)):
-            self.lin_comb.append(TensorProduct(Scalar(weights[i]),basis[i]))
-        self.update()
 
-    def action(self,A):
-        for l in self.lin_comb:
-            l.action(A)
-            if match_in_list(l[1],self.basis) == None:                         # means result is not in basis -> -result should be in basis 
-                l.action("Inv")
+# class LinearCombination:    # UNFINISHED
+#     def __init__(self,basis,weights,linear_dep = True):                       # list of weights of each element in basis; basis: list of objects, e.g. of class <Vector>; 
+#                                                                             # ! all objects in basis are assumed to be linearly independent
+#         self.basis = basis
+#         self.linear_dep = linear_dep                                            # True: treat -obj and obj as linearly dependent; False: treat as linearly independent
+#         self.lin_comb = []
+#         assert len(basis) == len(weights)
+#         for i in range(len(basis)):
+#             self.lin_comb.append(TensorProduct(Scalar(weights[i]),basis[i]))
+#         self.update()
+
+#     def action(self,A):
+#         for l in self.lin_comb:
+#             l.action(A)
+#             if match_in_list(l[1],self.basis) == None:                         # means result is not in basis -> -result should be in basis 
+#                 l.action("Inv")
                 
     
 class TensorProduct:       #UNFINISHED         # tensor product of arbitrary number and types of classes; each attribute of a TensorProduct instance is one object, e.g. VectorField
@@ -928,7 +1004,7 @@ def invert(object):
         # extend for different structures
 
 def negative_pair(m,n):                 #returns True if m = -n up to some precision
-    return abs(m+n) < 1e-8
+    return abs(m+n) < num_tol
 def str_sign(sign_mat):
     assert sign_mat == -1 or sign_mat == 1
     if sign_mat == 1:
@@ -960,7 +1036,7 @@ def match_in_list(x,l_y):                    # returns None if x is not equal up
                 return y
     else:
         for y in l_y:
-            if abs(x-y) < 1e-8:
+            if abs(x-y) < num_tol:
                 return y
     return None
 def orbit(object,group):                        #applies action of all Group.elements to object and returns list of resulting objects without duplicates

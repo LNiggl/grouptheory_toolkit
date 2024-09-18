@@ -16,7 +16,10 @@ class Group:                            #includes all important things we know a
     def find_identity(self):
         e = self.elements.copy()
         mt = self.mult_table.copy()
-        x,y = np.random.choice(len(e),2)                                         
+        while True:
+            x,y = np.random.choice(len(e),2)
+            if x != y:
+                break
         Ex = list(mt[e[x]].keys())[list(mt[e[x]].values()).index(e[x])]            
         Ey = list(mt[e[y]].keys())[list(mt[e[y]].values()).index(e[y])]
         assert Ex == Ey                                                 # I is such that gI=I for any g; evaluate from two g randomly
@@ -97,7 +100,7 @@ def split(O):                   #splits string of actions ABC into array of acti
         return O
     O = remove_I(O)
     P = []
-    if "Rot" in O or "Inv" in O:
+    if "Rot" in O or "Inv" in O:            # works for formalism of O_h element names
         while len(O)>0:
             if O[-1] == "v":
                 Op = O[-3:]
@@ -107,7 +110,7 @@ def split(O):                   #splits string of actions ABC into array of acti
                 Op = O[-4:]
                 P.append(Op)
                 O = O[:-4]
-    else:
+    else:                                  # works for names with at most one leading letter and one or multiple digits in name
         while len(O)>0:
             n = 1
             while not O[-n].isalpha():
@@ -145,5 +148,12 @@ def inner_product(f,h,group,classfunction = True):           # takes (class) fun
         for e in group.elements:
             s += f[e]*np.conjugate(h[e])
     return s / len(group.elements)
+
+def is_group_homomorphism(map,G,H):                     # Groups G,H, dictionary map: G -> H; returns true if for all elements of G, map(g1g2) = map(g1)map(g2)
+    for g1 in G.elements:
+        for g2 in G.elements:
+            if map[G.mult_table[g1][g2]] != H.mult_table[map[g1]][map[g2]]:
+                return False
+    return True
 
 

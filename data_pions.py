@@ -106,7 +106,7 @@ pi4 = o.TensorProduct(p7,p8)
 
 b4 = o.generate_basis(pi4,O_h)
 pi210 = r.rep_from_action(O_h,b4,"pi210")
-r.study_irreps(pi210,O_h,"../results/twopi210_irreps.txt")
+r.study_irreps(pi210,O_h,"../results/twopi210_irreps5.txt")
 
 #(2,1,1) - type 2Pion    
 
@@ -115,5 +115,5 @@ p10 = o.PseudoScalarField([-2,-1,-1])
 pi5 = o.TensorProduct(p9,p10)
 
 b5 = o.generate_basis(pi5,O_h)
-pi211 = r.rep_from_action(O_h,b5,"pi210")
+pi211 = r.rep_from_action(O_h,b5,"pi211")
 r.study_irreps(pi211,O_h,"../results/twopi211_irreps.txt")
