@@ -44,7 +44,7 @@ def matrix_from_action(A,basis,group_homomorphism = None):
         print(A,"->",group_homomorphism[A])
         A = group_homomorphism[A]
     d = len(basis)
-    M = np.zeros((d,d),dtype = np.complex)
+    M = np.zeros((d,d),dtype = complex)
     acted_basis = []
     for b in basis:
         x = b.copy()
@@ -59,11 +59,11 @@ def matrix_from_action(A,basis,group_homomorphism = None):
                 else:
                     M[i][j] = k
             else:
-                if basis[j].is_equal_to(acted_basis[i]):               # "if e_i gets transformed to e_j via action A" -> ge_i = M(A)_{ji} e_j == +/- e_j
-                    M[j][i] = 1                                     # --> M(A)_{ji} == +/- 1
+                if basis[j].is_equal_to(acted_basis[i]):                # "if e_i gets transformed to e_j via action A" -> ge_i = M(A)_{ji} e_j == +/- e_j
+                    M[j][i] = 1                                         # --> M(A)_{ji} == +/- 1
                 if basis[j].is_negative_of(acted_basis[i]):
                     M[j][i] = -1
-    if basis[0].direction_action == "right":
+    if basis[0].direction_action == "right":                              
         M = M.T
     return M
 
@@ -142,11 +142,11 @@ def product_rep(A, B):                                  #pass two  representatio
     r.basis = product_basis(A.basis,B.basis)
     return r            
 def product_basis(A,B):                 # arrays A,B of objects-> basis of product space as done via Kronecker product (np.kron())
-    basis = {}
+    basis = []
     for i in range(len(A)):
         for j in range(len(B)):
-            # basis[i*len(A)+j] = [A[i],B[j]]
-            basis[i*len(A)+j] = o.TensorProduct(A[i],B[j])
+            # basis[i*len(A)+j] = o.TensorProduct(A[i],B[j])
+            basis.append(o.TensorProduct(A[i],B[j]))
     return basis
 
 # projectors (adapted from the lecture notes: Prof. Dr. Christoph Lehner: Lattice QCD, chapter 11)
@@ -155,7 +155,7 @@ def projector_irrep(rep,irrep):                 #takes rep and EITHER Representa
     if isinstance(irrep,Representation):
         for c in rep.classes.keys():
             for g in rep.classes[c]:
-                ret += rep.hom[g]*irrep.characters[c]
+                ret += rep.hom[g]*np.conj(irrep.characters[c])
         P = np.matrix(ret * (irrep.characters["I"] / len(rep.elements)))
     else:
         for c in rep.classes.keys():
@@ -420,6 +420,7 @@ def T2_identify_components(P,Rep):          # P = [proj,mult] -> dict {"xx-yy": 
     return components
 def study_irreps(rep,group,filename):                               # find all irreps(like find_irreps()), then decompose all subspaces and write results to file; 
                                                                     # filename: absolute or relative path, must end in desired format,e.g. ".txt" 
+                                                                    # returns {irrep : {basisvector_name : [such vectors]}}
     c_dim = 0
     P_irrep = {}
     Rep = rep.copy("Rep")               # change Rep, leave the input Repr. rep unchanged
@@ -441,6 +442,8 @@ def study_irreps(rep,group,filename):                               # find all i
             P_irrep[irrep] = [P,temp.characters["I"] / chars["I"]]
     print("sum of dims: ",  c_dim)
     
+
+    inv_subspaces = {}
     f = open(filename, "w")
     f.write("Basis of " + rep.name + ": \n") 
     for b in rep.basis:
@@ -453,6 +456,7 @@ def study_irreps(rep,group,filename):                               # find all i
                 f.write("A1m subspace:"+"\n") 
             else:
                 f.write("A1p subspace:"+"\n")
+            inv_subspaces[key] = vecs
             f.write(str(vecs)+"\n")
         if key == "T1m" or key == "T1p":
             vecs = T1_identify_components(P_n_pair,rep)
@@ -460,6 +464,7 @@ def study_irreps(rep,group,filename):                               # find all i
                 f.write("T1m subspace:"+"\n")
             else:
                 f.write("T1p subspace:"+"\n")
+            inv_subspaces[key] = vecs
             f.write(str(vecs)+"\n")
         if key == "A2m" or key == "A2p":  
             vecs = A_identify_components(P_n_pair)                 
@@ -467,6 +472,7 @@ def study_irreps(rep,group,filename):                               # find all i
                 f.write("A2m subspace:"+"\n") 
             else:
                 f.write("A2p subspace:"+"\n")
+            inv_subspaces[key] = vecs
             f.write(str(vecs)+"\n")
         if key == "T2m" or key == "T2p":
             vecs = T2_identify_components(P_n_pair,rep)
@@ -474,6 +480,7 @@ def study_irreps(rep,group,filename):                               # find all i
                 f.write("T2m subspace:"+"\n")
             else:
                 f.write("T2p subspace:"+"\n")
+            inv_subspaces[key] = vecs
             f.write(str(vecs)+"\n")
         if key == "Em" or key == "Ep":
             vecs = E_identify_components(P_n_pair,rep)
@@ -481,15 +488,17 @@ def study_irreps(rep,group,filename):                               # find all i
                 f.write("Em subspace:"+"\n")
             else:
                 f.write("Ep subspace:"+"\n")
+            inv_subspaces[key] = vecs
             f.write(str(vecs)+"\n")
     f.close()
+    return inv_subspaces
 
 def scalar_prod(x,y):                           #returne (complex or real) scalar product between x and y 
     assert len(x) == len(y)
     temp = 0
     for i in range(len(x)):
-        u = np.complex(x[i])
-        v = np.conj(np.complex(y[i]))
+        u = complex(x[i])
+        v = np.conj(complex(y[i]))
         temp += u * v
     return temp            
 def normalize(x):                           # returns normalized vector(array etc.)
@@ -535,9 +544,9 @@ def subtract_for_zero_entries(u,v):             #subtracts vector v from u such 
             print("In subtract_for_zero_entries: FAIL: no nonzero entries.")
             i = 0
             break
-    f = np.complex(10000000000*u[i]/(100000000000*v[i]))
+    f = complex(10000000000*u[i]/(100000000000*v[i]))
     for j in range(len(u)):
-        new_u.append([np.complex(u[j])-f*np.complex(v[j])])
+        new_u.append([complex(u[j])-f*complex(v[j])])
     new_u = np.matrix(new_u)
     return new_u
 def first_imag_value(v):

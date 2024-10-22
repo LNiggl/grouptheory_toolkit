@@ -11,6 +11,7 @@ num_rtol = 1e-5
 class Scalar:
     def __init__(self,n):
         self.direction_action = "left"
+        # self.num = complex(n)
         self.num = n
         self.update()
     def __len__(self):
@@ -419,8 +420,8 @@ class L_Spinor:                                     #\psi_L (see P/S section 3.2
                                                     # therefore: the usefulness of this class might vary 
     def __init__(self,a,b):
         self.direction_action = "left"
-        self.a = np.complex(a)
-        self.b = np.complex(b)
+        self.a = complex(a)
+        self.b = complex(b)
         self.update()
     def copy(self):
         c = self.a
@@ -470,7 +471,7 @@ class L_Spinor:                                     #\psi_L (see P/S section 3.2
         return (abs(self.a-s.a)< num_tol and abs(self.b-s.b) < num_tol)
     def is_negative_of(self,s):
         return (abs(self.a+s.a)< num_tol and abs(self.b+s.b) < num_tol)
-    def lin_factor(self,s2):                 #returns scalar factor k such that self*k = s2; if not linearly dependent in that way, return None
+    def lin_factor(self,s2):                 #WRONG?? returns scalar factor k such that self*k = s2; if not linearly dependent in that way, return None
         if self.is_equal_to(s2):
             return 1
         # if (abs(s2.a)<num_tol and abs(s2.b)<num_tol):       #case s2 == (0,0) 
@@ -667,6 +668,8 @@ class PseudoScalarField:                               # particle with: Lorentz 
             return False
         else:
             return self.momentum < obj.momentum
+    def set_name_gpt(self,name):                                    # STATIC name; does not change when e.g. action is applied. Name in accordance with gpt convention. To use in a basis of Representation 
+        self.name_gpt = name
     def copy(self):
         mom = self.momentum.copy()
         struc = self.structure.copy()
@@ -843,39 +846,170 @@ class TensorField:                      # Field operator(with momentum) that tra
         self.momentum.action(A)
         self.update()
 
-# class LinearCombination:    # UNFINISHED
-#     def __init__(self,basis,weights,linear_dep = True):                       # list of weights of each element in basis; basis: list of objects, e.g. of class <Vector>; 
-#                                                                             # ! all objects in basis are assumed to be linearly independent
-#         self.basis = basis
-#         self.linear_dep = linear_dep                                            # True: treat -obj and obj as linearly dependent; False: treat as linearly independent
-#         self.lin_comb = []
-#         assert len(basis) == len(weights)
-#         for i in range(len(basis)):
-#             self.lin_comb.append(TensorProduct(Scalar(weights[i]),basis[i]))
-#         self.update()
+class LinearCombination:    
+    def __init__(self,basis,weights,linear_dep = True,label = None):                       # list of weights of each element in basis; basis: list of objects, e.g. of class <Vector>; 
+                                                                            # ! all objects in basis are assumed to be linearly independent
+        self.basis = basis
+        self.linear_dep = linear_dep                                            # True: treat -obj and obj as linearly dependent; False: treat as linearly independent
+        self.lin_comb = []
+        if not label == None:
+            self.set_label(label)
+        assert len(basis) == len(weights)
+        for i in range(len(basis)):
+            self.lin_comb.append(TensorProduct(Scalar(weights[i]),basis[i]))
+        self.update()
+    def set_label(self,label):                  # for labelling, e.g. to call some linear combination "x" 
+        self.label = label
+    def copy(self):
+        basis = []
+        weights = []
+        for i in range(len(self.basis)):
+            basis.append(self.basis[i].copy())
+            weights.append(self.lin_comb[i].obj[0].num)
+        lin_dep = (self.linear_dep == True)
+        new_LC = LinearCombination(basis,weights,linear_dep = lin_dep)
+        if hasattr(self,"label"):
+            l = "" + self.label
+            new_LC.set_label(l)
+        return new_LC
+    def update(self):                   # updates order of summands and the name
+        ordered_lin_comb = [0 for l in self.lin_comb]
+        for l in self.lin_comb:                                         # l.obj: [0]: Scalar(weight), [1]: element of basis
+            l.update()
+            s = match_in_list(l.obj[1],self.basis,index = True)
+            if s == None:
+                assert self.linear_dep
+                s = negative_match_in_list(l.obj[1],self.basis,index = True)
+                l.obj[0].num = minus(l.obj[0].num)
+                l.obj[1] = self.basis[s]
+            assert not s == None
+            ordered_lin_comb[s] = l
+        self.lin_comb = ordered_lin_comb
+        for l in self.lin_comb:
+            l.update()
+        ########## naming ###########
+        self.name = "Linear_Comb.{"
+        for l in self.lin_comb:
+            self.name += l.obj[0].name[6:] + "*" + l.obj[1].name + "+"
+        self.name =self.name[:-1] + "}"
+    def printname(self):
+        self.update()
+        print(self.name)
+    def lin_factor(self,lc2):                 #returns scalar factor k=s/r such that k*self = lc2; if not linearly dependent in that way, return None
+        r = []
+        s = []
+        n_0 = 0                                 #counter of how many wheights are zero
+        k = []
+        for i in range(len(self.lin_comb)):
+            r.append(self.lin_comb[i].obj[0].num)
+            s.append(lc2.lin_comb[i].obj[0].num)
+            if abs(r[i]) < num_tol:
+                if abs(s[i]) < num_tol:
+                    n_0 += 1
+                else:
+                    # print("Exit 0")
+                    return None
+            else: 
+                k.append(s[i]/r[i])
+        # print("k", k)
+        if n_0 == len(self.lin_comb):
+            print("LC.lin:factor: all wheights zero for both objects")#
+            return 1
+        for j in range(len(k)):
+            if not abs(k[0]-k[j]) < num_tol:
+                # print("Exit 1")
+                return None
+        return k[0]
+                
 
-#     def action(self,A):
-#         for l in self.lin_comb:
-#             l.action(A)
-#             if match_in_list(l[1],self.basis) == None:                         # means result is not in basis -> -result should be in basis 
-#                 l.action("Inv")
+            # if self.is_equal_to(s2):
+            #     return 1
+            # # if (abs(s2.a)<num_tol and abs(s2.b)<num_tol):       #case s2 == (0,0) 
+            # #     if (abs(self.a) < num_tol and abs(self.b) < num_tol):       # self == (0,0)
+            # #         return 1
+            # #     return None
+            # if not abs(self.a) < num_tol:       # case self.a != 0
+            #     k =  s2.a/self.a
+            # elif not abs(self.b) < num_tol:     #case self.b != 0
+            #     k = s2.b/self.b       
+            # else:                               #case self == (0,0) and they aren´t equal
+            #     return None                                                   
+            # scaled_s = L_Spinor(k*self.a,k*self.b)
+            # if scaled_s.is_equal_to(s2):
+            #     return k
+            # return None
+    def is_equal_to(self,LC):
+        # all_same = True
+        # # if not all_same:
+        # for i in range(len(self.lin_comb)):
+        #     if not self.lin_comb[i].obj[0].is_equal_to(LC.lin_comb[i].obj[0]):
+        #         all_same = False
+        #         # print("in TensorProduct: in is_equal_to: index ", i , ": ", self.lin_comb[i].obj[0], " != " , LC.lin_comb[i].obj[0] ) 
+        # return all_same
+        f = self.lin_factor(LC)
+        if f == None:
+            return False
+        return abs(f-1) < num_tol
+    def is_negative_of(self,LC):
+        # all_negative = True
+        # for i in range(len(self.lin_comb)):
+        #     if self.lin_comb[i].obj[0].is_negative_of(LC.lin_comb[i].obj[0]):
+        #         all_negative = False
+        # return all_negative
+        f = self.lin_factor(LC)
+        if f == None:
+            return False
+        return abs(f+1) < num_tol
+    def action(self,A):
+        temp = self.copy()
+        for l in temp.lin_comb:
+            l.action(A)
+        for i in range(len(self.lin_comb)):
+            self.lin_comb[i] = temp.lin_comb[i]
+        self.update()
+    def inverse_action(self,A):
+        temp = self.copy()
+        for l in temp.lin_comb:
+            l.inverse_action(A)
+        for i in range(len(self.lin_comb)):
+            self.lin_comb[i] = temp.lin_comb[i]
+        self.update()
+                
                 
     
-class TensorProduct:       #UNFINISHED         # tensor product of arbitrary number and types of classes; each attribute of a TensorProduct instance is one object, e.g. VectorField
+class TensorProduct:                            # tensor product of arbitrary number and types of classes; each attribute of a TensorProduct instance is one object, e.g. VectorField
                                                 # extend to deal nicely with Scalars and their accumulative signs
+    
     def __init__(self,*v,distinguishable = True):  
         self.obj = {}                   
         for i in range(len(v)):
             self.obj[i] = v[i]
         self.distinguishable = distinguishable
-        if not all(self.obj[i].direction_action == self.obj[0].direction_action for i in range(len(v))):
-            print("action direction problem")
+        # if not all(self.obj[i].direction_action == self.obj[0].direction_action for i in range(len(v))):
+        #     print("action direction problem")
+        def action_direction_test(self): 
+            v_excl_scalars = []
+            for o in self.obj.values():
+                if not (isinstance(o,Scalar) or isinstance(o,PseudoScalar)):
+                    v_excl_scalars.append(o)
+            if not all(v_excl_scalars[i].direction_action == v_excl_scalars[0].direction_action for i in range(len(v_excl_scalars))):
+                print("WARNING: in TensorProduct: mixed action direction")
+        action_direction_test(self)
         self.direction_action = self.obj[0].direction_action
         self.update()
     def __lt__(self,t):                         # only for sorting purposes
         if isinstance(self.obj[0],PseudoScalarField):
             return self.obj[0].momentum < t.obj[0].momentum
         return self.obj[0] < t.obj[0]
+    def set_name_gpt(self,name = None):
+        if name == None: 
+            self.name_gpt = ""
+            for i in range(len(self.obj.values())):
+                assert hasattr(self.obj[i],"name_gpt")
+                self.name_gpt += self.obj[i].name_gpt + "\n"
+        else:
+            self.name_gpt = name            
+
     def copy(self):
         temp = list(self.obj.values())
         new_obj = []
@@ -885,8 +1019,10 @@ class TensorProduct:       #UNFINISHED         # tensor product of arbitrary num
         new_t = TensorProduct(*new_obj,distinguishable = dist)
         return new_t
     def update(self):
+        self.obj[0].update()
         self.name = self.obj[0].name
         for i in range(len(self.obj)-1):
+            self.obj[i+1].update()
             self.name += "_x_" + self.obj[i+1].name
         if self.distinguishable:
             self.name+= "[dist.]"
@@ -964,8 +1100,7 @@ class TensorProduct:       #UNFINISHED         # tensor product of arbitrary num
             pairs.append([o1,o2])
             objects2.remove(o2)
         return [pairs,n_sign_diff]
-        
-
+    
 
 def print_all(object_list):
     for o in object_list:
@@ -1029,29 +1164,51 @@ def coord_to_num(s):                # used for sorting in Rho __lt__: String s c
     if n == 0:
         return None
     return n
-def match_in_list(x,l_y):                    # returns None if x is not equal up to numerical error to any value in l_y, otherwhise returns first match
+def match_in_list(x,l_y, index = False):                    # returns None if x is not equal up to numerical error to any value in l_y, otherwhise returns first match
     if hasattr(x, "is_equal_to"):
         for y in l_y:
             if x.is_equal_to(y):
+                if index:
+                    return l_y.index(y)
                 return y
     else:
         for y in l_y:
             if abs(x-y) < num_tol:
+                if index: 
+                    return l_y.index(y)
+                return y
+    return None
+def negative_match_in_list(x,l_y, index = False):                    # returns None if -x is not equal up to numerical error to any value in l_y, otherwhise returns first match
+    if hasattr(x, "is_negative_of"):
+        for y in l_y:
+            if x.is_negative_of(y):
+                if index:
+                    return l_y.index(y)
+                return y
+    else:
+        for y in l_y:
+            if abs(x+y) < num_tol:
+                if index:
+                    return l_y.index(y)
                 return y
     return None
 def orbit(object,group):                        #applies action of all Group.elements to object and returns list of resulting objects without duplicates
     if object == None:
         return None
     if not hasattr(object,"lorentz_structure"):
-        orbit = [object.copy()]
-        for g in group.elements:
-            o = object.copy()
-            o.action(g)
-            if not any([q.is_equal_to(o) for q in orbit]):
-                orbit.append(o)  
+        return true_orbit(object,group)         
     else:
-        orbit = exhaustive_orbit(object,group)
-    return orbit
+        return extended_orbit(object,group)
+    # return orbit
+def intersection(l_x,l_y):                      # takes two lists. returns as list: intersection (set of common elements) of two lists of objects; returns None if disjoint 
+    intersec = []
+    for x in l_x:
+        if not match_in_list(x,l_y) == None:            # since match_in_list: only adds FIRST, i.e. ONE instance of object from both sets to intersec; DONT USE this if number of occurrance is important
+            intersec.append(x)
+    if len(intersec) == 0:
+        return None
+    return intersec
+
 def remove_neg(orbit):                          # receives orbit, removes negatives if antiparallel pairs exist                 
     new_list = []
     for p in orbit:
@@ -1074,8 +1231,16 @@ def generate_basis(objects,group, drop_sign = True):          # receive list of 
     # could add sorting for something like Pi(-1,0,0). functions <>.ispositive()?
     if drop_sign:
         O = remove_neg(O)                   
-    return O  
-def exhaustive_orbit(object,group):                   # find all possible combinations of orbits of each of the attributes; attributes currently: structure and momentum
+    return O 
+def true_orbit(object,group):
+    orbit = [object.copy()]
+    for g in group.elements:
+        o = object.copy()
+        o.action(g)
+        if not any([q.is_equal_to(o) for q in orbit]):
+            orbit.append(o)
+    return orbit
+def extended_orbit(object,group):                   # find all possible combinations of orbits of each of the attributes; attributes currently: structure and momentum
     struc_orbit = None
     momentum_orbit = None
     if hasattr(object,"structure"):

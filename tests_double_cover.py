@@ -52,7 +52,7 @@ def group_hom_via_reps(Rep1,Rep2,F):        #F:function relating Rep1 matrices t
     return group_hom
 
 b = o.generate_basis([o.Vector([1,0,0])],O)
-T1 = r.rep_from_action(O,b,"T1m")
+T1 = r.rep_from_action(O,b,"T1")
 T1.check_if_homomorphism()
 
 
