@@ -22,7 +22,8 @@ class Representation(g.Group):
         new_rep = Representation(self.group,hom,name)
         if hasattr(self,"basis"):
             new_rep.basis = self.basis
-        # chars = self.characters.copy()
+        if hasattr(self,"direction_action"):
+            new_rep.direction_action = self.direction_action
         return new_rep
     def update(self):
         for c in self.classes:
@@ -30,8 +31,15 @@ class Representation(g.Group):
     def check_if_homomorphism(self):
         for g in self.elements:
             for h in self.elements:
-                eps = np.linalg.norm(np.matmul(self.hom[g],self.hom[h]) - self.hom[self.mult_table[g][h]])
-                assert eps < 1e-13    
+                if self.direction_action == "right":
+                    eps = np.linalg.norm(np.matmul(self.hom[g].T,self.hom[h].T) - self.hom[self.mult_table[g][h]].T)
+                elif self.direction_action == "left":
+                    eps = np.linalg.norm(np.matmul(self.hom[g],self.hom[h]) - self.hom[self.mult_table[g][h]])
+                else:                       # cases with neither right nor left action -> must be combination, which does not form homomorphism                
+                    assert False
+                # eps = np.linalg.norm(np.matmul(self.hom[g],self.hom[h]) - self.hom[self.mult_table[g][h]])
+                assert eps < 1e-13
+                
     def is_reducible(self):
         return g.inner_product(self.characters,self.characters,self.group) - 1 > 1e-5
     def round_chars(self):
@@ -63,14 +71,14 @@ def matrix_from_action(A,basis,group_homomorphism = None):
                     M[j][i] = 1                                         # --> M(A)_{ji} == +/- 1
                 if basis[j].is_negative_of(acted_basis[i]):
                     M[j][i] = -1
-    if basis[0].direction_action == "right":                              
-        M = M.T
+    # if basis[0].direction_action == "right":                            # CAREFUL with right action: M built like M.T, but application of trafo must be by right multiplication of that matrix M.T,                          
+    #     M = M.T                                                         # therefore again by left multiplication of (M.T).T
     return M
 
 def hom_from_action(group,basis,group_homomorphism = None):                                 # returns the dict for Rep.hom; 
                                                                                             # group_homomorphism: dictionary, e.g. for mapping double cover to single cover actions
     return {g : matrix_from_action(g,basis,group_homomorphism) for g in group.elements}
-def rep_from_action(group,basis,name,group_homomorphism = None):                       # group_homomorphism: dictionary, e.g. for mapping double cover to single cover actions
+def rep_from_action(group,basis,name,group_homomorphism = None):                       # group_homomorphism param: dictionary, e.g. for mapping double cover to single cover actions
     hom = hom_from_action(group,basis,group_homomorphism)
     Gamma = Representation(group,hom,name)
     Gamma.basis = basis
@@ -140,6 +148,7 @@ def product_rep(A, B):                                  #pass two  representatio
        hom[g] = np.kron(A.hom[g],B.hom[g])
     r = Representation(A,hom,A.name + "_x_" + B.name)
     r.basis = product_basis(A.basis,B.basis)
+    r.direction_action = r.basis[0].direction_action
     return r            
 def product_basis(A,B):                 # arrays A,B of objects-> basis of product space as done via Kronecker product (np.kron())
     basis = []
@@ -373,12 +382,31 @@ def T1_identify_components(P,Rep):          # P = [proj,mult] -> dict {"x" : v o
                 # components["x"][i] = rotate_to_real_valued(components["x"][i])
                 components["x"][i] = make_first_entry_pos(components["x"][i])
     components["y"] = []
-    components["z"] = []    
-    # direction_action no factor here, since this is taken care of in Rep.hom via transposition: there, every right-action problem is transformed in a left-action problem
-    for x in components["x"]:
-        y = np.matmul(Rep.hom["Rot2"],x)
-        components["y"].append(y)
-        components["z"].append(np.matmul(Rep.hom["Rot0"],y)) 
+    components["z"] = [] 
+    # define such that (x,y,z) form a right system. Depending on direction_action: x->y and y->z done by opposite rotations since f.Rot_i^{right} = Rot_i^{left}^{-1}.f   
+    if Rep.direction_action == "right":
+        for x in components["x"]:
+            y = np.matmul(Rep.hom["Rot2"].T,x)
+            components["y"].append(y)
+            components["z"].append(np.matmul(Rep.hom["Rot0"].T,y))
+    elif Rep.direction_action == "left":
+        for x in components["x"]:
+            y = np.matmul(Rep.hom["Rot2"],x)
+            components["y"].append(y)
+            components["z"].append(np.matmul(Rep.hom["Rot0"],y)) 
+    else:
+        print("PROBLEM: in T1_identify_components: neither left nor right action applicable.")
+    #test
+    # if Rep.direction_action == "left":
+    #     for x in components["x"]:
+    #         y = np.matmul(Rep.hom["Rot2"],x)
+    #         components["y"].append(y)
+    #         components["z"].append(np.matmul(Rep.hom["Rot0"],y))
+    # elif Rep.direction_action == "right":
+    #     for x in components["x"]:
+    #         y = np.matmul(Rep.hom["Rot2"].T,x)
+    #         components["y"].append(y)
+    #         components["z"].append(np.matmul(Rep.hom["Rot0"].T,y))
     return components
 
 def E_identify_components(P,Rep):          # P = [proj,mult] -> dict {"xx-yy": .., "xx-zz": ..} such that same array entries, e.g. dict["x"][0],dict["y"][0],.. form an inv. subspace
@@ -412,11 +440,18 @@ def T2_identify_components(P,Rep):          # P = [proj,mult] -> dict {"xx-yy": 
                 components["xy+yx"][i] = make_first_entry_pos(components["xy+yx"][i])       # introduce sign convention for vectors
     components["xz+zx"] = []
     components["yz+zy"] = [] 
-    # direction_action no factor here, since this is taken care of in Rep.hom via transposition: there, every right-action problem is transformed in a left-action problem
-    for a in components["xy+yx"]:
-        components["xz+zx"].append(np.matmul(Rep.hom["Rot0"],a))                # rotate xy+yx to xz+zx   
-    for b in components["xz+zx"]:
-        components["yz+zy"].append(np.matmul(Rep.hom["Rot2"],b))                # rotate xz+zx to yz+zy
+    if Rep.direction_action == "left":
+        for a in components["xy+yx"]:
+            components["xz+zx"].append(np.matmul(Rep.hom["Rot0"],a))                # rotate xy+yx to xz+zx   
+        for b in components["xz+zx"]:
+            components["yz+zy"].append(np.matmul(Rep.hom["Rot2"],b))                # rotate xz+zx to yz+zy
+    elif Rep.direction_action == "right":
+        for a in components["xy+yx"]:
+            components["xz+zx"].append(np.matmul(Rep.hom["Rot0"].T,a))                # rotate xy+yx to xz+zx   
+        for b in components["xz+zx"]:
+            components["yz+zy"].append(np.matmul(Rep.hom["Rot2"].T,b))                # rotate xz+zx to yz+zy
+    else:
+        print("PROBLEM: in T1_identify_components: neither left nor right action applicable.")
     return components
 def study_irreps(rep,group,filename):                               # find all irreps(like find_irreps()), then decompose all subspaces and write results to file; 
                                                                     # filename: absolute or relative path, must end in desired format,e.g. ".txt" 

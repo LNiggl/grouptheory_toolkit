@@ -1,8 +1,4 @@
-def compare_strings(file1,file2):
-    # print("equality of:" , file1 , " and " , file2 , ":")
-    # s1 = open(file1,"r")
-    # s2 = open(file2,"r")
-    # return s1 == s2'
+def compare_strings(file1,file2):                               #returns True if strings are the same
     print("differences between", file1, " and ", file2 , ":")
     from difflib import Differ
     with open(file1) as f1, open(file2) as f2:
@@ -17,12 +13,11 @@ def compare_strings(file1,file2):
                 print("first difference in line:", e)
                 break
             c += 1
-    # print("(end list of different lines)")
-    # if d != 0:
-    #     print("first difference in line:", e)
-    # else:
     if e < 0:
-        print("no difference; linecount:" , c)
+        # print("no difference; linecount:" , c)
+        return True
+    else:   
+        return False
 
 def uniform_zero(s):        # takes string of number, writes zeros in same way(mainly: remove "-")
     nice_s = ""

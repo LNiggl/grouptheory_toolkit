@@ -64,31 +64,107 @@ A2p.check_if_homomorphism()
 list_irreps = [A1m,A1p,T1m,T1p,A2m,A2p,T2m,T2p,Em,Ep]
 O_h.set_char_table(list_irreps)
 
-#(2,1,0) - type 2Pion    
+#(1,0,0) - type 2Pion    
 f = open("../tests/twopi100_test_trafos.txt","w")
 
-p1 = o.PseudoScalarField([1,0,0])
-p2 = o.PseudoScalarField([-1,0,0])
-pi4 = o.TensorProduct(p1,p2)
+p1 = o.PseudoScalarField([1,0,0],explicit_momentum_trafo=True)
+p2 = o.PseudoScalarField([-1,0,0],explicit_momentum_trafo=True)
+pi1 = o.TensorProduct(p1,p2)
+p1.set_name_gpt(p1.namestring_gpt_pion("minus"))
+p2.set_name_gpt(p2.namestring_gpt_pion("plus"))
+pi1.set_name_gpt(pi1.namestring_gpt_twopion())
 
-b4 = o.generate_basis(pi4,O_h)
-pi100 = r.rep_from_action(O_h,b4,"pi100")
-pi100.check_if_homomorphism()
-for A in gen_actions:
-    f.write(A + ":\n")
-    f.write(str(pi100.hom[A]) + "\n")
+b1 = o.generate_basis(pi1,O_h)
+pi100 = r.rep_from_action(O_h,b1,"pi100")
+
 weights_pi100 = []
 for i in range(len(pi100.basis)):
     basisv = [0 for j in range(len(pi100.basis))]
     basisv[i] = 1
     weights_pi100.append(basisv)
-testLC = o.LinearCombination(pi100.basis,weights_pi100[1])
-print("Matrix for Rot0:")
-print(pi100.hom["Rot0"])
-testLC.printname()
-testLC.action("Rot0")
-print("Rot0 -> ")
-testLC.printname()
+f.write("Test: LinearCombination action agrees with matrix multiplication:   ")
 for i in range(len(weights_pi100)):
-    print(i)
     assert t.matrices_agree_with_LinComb_objects(pi100,weights_pi100[i])
+f.write("Test successful.\n")
+
+subspaces = r.study_irreps(pi100,O_h,"../results/twopi100_irreps.txt")
+
+# # check approach with LinerCombination objects
+# for irrep_name,eval_evecs in subspaces.items():
+#     print("Checking equality of approaches in ", irrep_name)
+#     for evecs in eval_evecs.values():
+#         for evec in evecs:
+#             assert t.matrices_agree_with_LinComb_objects(pi100,evec)
+
+### check if invariant irred. subspaces are independent of each other
+
+subspaces_ordered_by_space = t.reorder_subspaces(subspaces)
+f.write("Test: All subspaces disjoint:   ")
+all_disjoint = t.subspaces_disjoint(subspaces_ordered_by_space,pi100)
+assert all_disjoint
+f.write("Test successful.\n")
+
+f.write("Basis of the representation:\n")
+for i in range(len(pi100.basis)):
+    f.write(str(i+1)+":\n")
+    f.write(pi100.basis[i].name_gpt)
+    f.write("\n")
+f.write("Matrices of rotations and parity:\n")
+for A in gen_actions:
+    f.write(A + ":\n")
+    f.write(str(pi100.hom[A]) + "\n")
+
+#######################################
+f.write("\nInvariant irreducible subspaces:\n\n")
+f.write("T1m\n")
+
+LC_T1m_space_1 = t.T1_labelling(subspaces_ordered_by_space["T1m"][0],pi100)
+for lc in LC_T1m_space_1:
+    lc.set_name_gpt()
+# LC_T1m_space_2 = t.T1_labelling(subspaces_ordered_by_space["T1m"][1],pi100)
+t.create_operator_files(LC_T1m_space_1,"D:/Master/Masterarbeit/tests/gpt_folder_structure/","I1_T1M/","2pi.g5.0.0.1")
+T1m_trafos_1 = t.test_trafo_behavior(LC_T1m_space_1,gen_actions)
+# T1m_trafos_2 = t.test_trafo_behavior(LC_T1m_space_2,gen_actions)
+f.write("Subspace 1/1. Basis:\n")
+for lc in LC_T1m_space_1:
+    f.write(lc.label + ":\n" + lc.name_gpt + "\n")
+
+f.write("\nTransformations:\n")
+f.write(str(T1m_trafos_1))
+f.write("\n\n")
+
+f.write("Ep\n")
+LC_Ep_space_1 = t.E_labelling(subspaces_ordered_by_space["Ep"][0],pi100)
+for lc in LC_Ep_space_1:
+    lc.set_name_gpt()
+t.create_operator_files(LC_Ep_space_1,"D:/Master/Masterarbeit/tests/gpt_folder_structure/","I1_EP/","2pi.g5.0.0.1")
+difference_vec_of_eps = LC_Ep_space_1[0].copy()
+difference_vec_of_eps.add(LC_Ep_space_1[1].negative())
+difference_vec_of_eps.set_label("(eps1 - eps2)")
+Ep_trafos_1 = t.test_trafo_behavior(LC_Ep_space_1,gen_actions,add_outcome_candidates=[difference_vec_of_eps])
+f.write("Subspace 1/1. Basis:\n")
+for lc in LC_Ep_space_1:
+    f.write(lc.label + ":\n" + lc.name_gpt + "\n")
+
+f.write("\nTransformations:\n")
+f.write(str(Ep_trafos_1))
+f.write("\n\n")
+
+## test
+
+# subspaces_test = r.study_irreps(pi100,O_h,"../results/twopi100_irreps.txt")
+# subspaces_ordered_by_space_test = t.reorder_subspaces(subspaces_test)
+# for irrep,spaces in subspaces_ordered_by_space_test.items():
+#     print(irrep)
+#     for space in spaces:
+#         print("Next subspace:")
+#         print(space)
+# subspaces_ordered_by_space_test = t.label_all(subspaces_ordered_by_space_test,pi100)
+# print("After labelling: ")
+# for irrep,spaces in subspaces_ordered_by_space_test.items():
+#     print(irrep)
+#     for space in spaces:
+#         print("Next subspace:")
+#         o.print_all(space)
+#         for x in space:
+#             print(x.label)

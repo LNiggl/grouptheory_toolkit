@@ -584,29 +584,32 @@ class L_Spinor:                                     #\psi_L (see P/S section 3.2
 #         self.pi2.inverse_action(A)              # CAREFUL: no action on sign object, rather: update the sign
 #         self.update()
 
-# def overall_sign(obj_list):                 # compute overall sign from all occurring Scalar or Pseudoscalars (or other) signs and return as Scalar or PseudoScalar object
-#     S = 1
-#     num_PS = 0
-#     for obj in obj_list:
-#         if hasattr(obj,"sign"):
-#             if isinstance(obj.sign,Scalar):
-#                 S = S*obj.sign.num
-#             if isinstance(obj.sign,PseudoScalar):
-#                 S = S*obj.sign.num
-#                 num_PS += 1
-#         if isinstance(obj,numbers.Number):
-#             assert obj in {-1,1}
-#             S = obj*S
-#             num = True
-#     if num:
-#         return S
-#     if num_PS % 2:              # odd number of PseudoScalars
-#         return PseudoScalar(S)
-#     return Scalar(S)
+def overall_sign(obj_list):                 # compute overall sign from all occurring Scalar or Pseudoscalars (or other) signs and return as Scalar or PseudoScalar object
+    S = 1
+    num_PS = 0
+    for obj in obj_list:
+        if hasattr(obj,"sign"):
+            if isinstance(obj.sign,Scalar):
+                S = S*obj.sign.num
+            if isinstance(obj.sign,PseudoScalar):
+                S = S*obj.sign.num
+                num_PS += 1
+        if isinstance(obj,numbers.Number):
+            assert obj in {-1,1}
+            S = obj*S
+            num = True
+    if num:
+        return S
+    if num_PS % 2:              # odd number of PseudoScalars
+        return PseudoScalar(S)
+    return Scalar(S)
 
 class ScalarField:
-    def __init__(self,momentum,struc = None):
+    def __init__(self,momentum,struc = None,explicit_momentum_trafo = False):
         self.direction_action = "right"
+        self.explicit_momentum_trafo = explicit_momentum_trafo
+        if self.explicit_momentum_trafo:
+            self.direction_action = "left"
         self.lorentz_structure = "scalar"
         if isinstance(momentum,Vector):
             self.momentum = momentum
@@ -624,8 +627,9 @@ class ScalarField:
     def __lt__(self,obj):
         return self.momentum < obj.momentum
     def copy(self):
-        mom = self.momentum.copy()        
-        new = ScalarField(mom)
+        mom = self.momentum.copy()  
+        explicit_mom_trafo = (self.explicit_momentum_trafo == True)      
+        new = ScalarField(mom,explicit_momentum_trafo = explicit_mom_trafo)
         return new
     def update(self):
         self.structure.update()
@@ -639,14 +643,24 @@ class ScalarField:
     def is_negative_of(self,R):
         return False                    # impossible by construction 
     def action(self,A):
-        self.momentum.inverse_action(A)
+        if not self.explicit_momentum_trafo:
+            self.momentum.inverse_action(A)
+        else:
+            self.momentum.action(A)
         self.update()
     def inverse_action(self,A):
-        self.momentum.action(A)
+        if not self.explicit_momentum_trafo:
+            self.momentum.action(A)
+        else:
+            self.momentum.inverse_action(A)
         self.update()
 class PseudoScalarField:                               # particle with: Lorentz pseudoscalar structure (under rotations), momentum
-    def __init__(self,momentum,struc = None):
-        self.direction_action = "right"
+    def __init__(self,momentum,struc = None, explicit_momentum_trafo = False):
+        self.explicit_momentum_trafo = explicit_momentum_trafo                  # parameter. If False: \psi(p)->det(R)\psi(R^-1 p), if True: \psi(p)->det(R)\psi(Rp) under action R
+        if self.explicit_momentum_trafo: 
+            self.direction_action = "left"
+        else:
+            self.direction_action = "right"
         self.lorentz_structure = "pseudoscalar"
         if isinstance(momentum,Vector):
             self.momentum = momentum
@@ -668,17 +682,41 @@ class PseudoScalarField:                               # particle with: Lorentz 
             return False
         else:
             return self.momentum < obj.momentum
-    def set_name_gpt(self,name):                                    # STATIC name; does not change when e.g. action is applied. Name in accordance with gpt convention. To use in a basis of Representation 
+    def set_name_gpt(self,name):                                    # Name in accordance with gpt convention. To use e.g. in a basis of Representation 
         self.name_gpt = name
+    def namestring_gpt_pion(self,type = "minus"):                   # treat this pseudoscalar object as \pi^(+/-) meson. Create according namestring for set_name_gpt
+        name_gpt = "FACTOR " + str(np.real(self.structure.num)) + " " + str(np.imag(self.structure.num)) + "\n"
+        if type == "minus":                                         # pi^- 
+           name_gpt += "UBAR t\nGAMMA 5\nMOM ["
+           name_gpt += str(self.momentum.x) + "," +  str(self.momentum.y) + "," +  str(self.momentum.z) + "] t\n" 
+           name_gpt += "D t\n"
+        if type == "plus":                                         # pi^- 
+           name_gpt += "DBAR t\nGAMMA 5\nMOM ["
+           name_gpt += str(self.momentum.x) + "," +  str(self.momentum.y) + "," +  str(self.momentum.z) + "] t\n" 
+           name_gpt += "U t\n"
+        #if zero pion: ...
+        return name_gpt
+    def update_name_gpt(self):                              # updates name_gpt; use in update() only if name_gpt exists
+        # gpt naming in case of pions
+        if "UBAR " in self.name_gpt and "D " in self.name_gpt:
+            self.set_name_gpt(self.namestring_gpt_pion(type = "minus"))
+        elif "DBAR " in self.name_gpt and "U " in self.name_gpt:
+            self.set_name_gpt(self.namestring_gpt_pion(type = "plus"))
+        # elif zero pion: ...
     def copy(self):
         mom = self.momentum.copy()
         struc = self.structure.copy()
-        new = PseudoScalarField(mom,struc)
+        explicit_mom_trafo = (self.explicit_momentum_trafo == True)
+        new = PseudoScalarField(mom,struc,explicit_momentum_trafo = explicit_mom_trafo)
+        if hasattr(self, "name_gpt"):
+            new.set_name_gpt("" + self.name_gpt)
         return new
     def update(self):
         self.structure.update()
         self.momentum.update()
         self.name = "PseudoScalarField{" + self.structure.name[8:-1] + "}(p=" + self.momentum.name[4:]
+        if hasattr(self,"name_gpt"):
+            self.update_name_gpt()
     def printname(self):
         self.update()
         print(self.name)
@@ -688,17 +726,21 @@ class PseudoScalarField:                               # particle with: Lorentz 
         return self.structure.is_negative_of(R.structure) and self.momentum.is_equal_to(R.momentum)
     def action(self,A):
         self.structure.action(A)
-        self.momentum.inverse_action(A)
+        if not self.explicit_momentum_trafo:
+            self.momentum.inverse_action(A)
+        else:
+            self.momentum.action(A)
         self.update()
     def inverse_action(self,A):
         self.structure.inverse_action(A)
-        self.momentum.action(A)
+        if not self.explicit_momentum_trafo:
+            self.momentum.action(A)
+        else:
+            self.momentum.inverse_action(A)
         self.update()
 
 class VectorField:                               # particle with: inner vector structure (under rotations), momentum
-    def __init__(self,momentum,struc = None):
-        self.direction_action = "mixed"
-        self.lorentz_structure = "vector"
+    def __init__(self,momentum,struc = None, explicit_momentum_trafo = False):        
         if isinstance(momentum,Vector):
             self.momentum = momentum
         else:
@@ -711,6 +753,15 @@ class VectorField:                               # particle with: inner vector s
         else:
             assert len(struc) == 3
             self.structure = Vector(struc)
+        zero = Vector([0,0,0])
+        if self.momentum.is_equal_to(zero):
+            self.direction_action = "left"
+        else: 
+            self.direction_action = "mixed"
+        self.explicit_momentum_trafo = explicit_momentum_trafo
+        if self.explicit_momentum_trafo:             # parameter. If False: V(p)->RV(R^-1 p), if True: \psi(p)->RV(Rp) under action R
+            self.direction_action = "left"
+        self.lorentz_structure = "vector"
         self.update()
     def __lt__(self,obj):
         if self.structure < obj.structure:
@@ -719,15 +770,44 @@ class VectorField:                               # particle with: inner vector s
             return False
         else:
             return self.momentum < obj.momentum
+    def set_name_gpt(self,name):
+        self.name_gpt = name
+    def namestring_gpt_rho(self,type = "minus"):                   # treat this vectorField object as \rho^(+/-) meson. Create according namestring for set_name_gpt
+        idx = self.structure_index()
+        name_gpt = "FACTOR " + str(np.real(self.structure.x+self.structure.y+self.structure.z)) + " " + str(np.imag(self.structure.x+self.structure.y+self.structure.z)) + "\n"
+        if type == "minus":                                         # pi^- 
+            name_gpt += "UBAR t\n"
+            name_gpt += "GAMMA " + str(idx)        
+            name_gpt += "\nMOM [" +str(self.momentum.x) + "," +  str(self.momentum.y) + "," +  str(self.momentum.z) + "] t\n" 
+            name_gpt += "D t\n"
+        if type == "plus":                                         # pi^- 
+            name_gpt += "DBAR t\n"
+            name_gpt += "GAMMA" + str(idx)
+            name_gpt +="\nMOM [" + str(self.momentum.x) + "," +  str(self.momentum.y) + "," +  str(self.momentum.z) + "] t\n" 
+            name_gpt += "U t\n"
+        #if zero pion: ...
+        return name_gpt
+    def update_name_gpt(self):                              # updates name_gpt; use in update() only if name_gpt exists
+        # gpt naming in case of rho^+/-
+        if "UBAR " in self.name_gpt and "D " in self.name_gpt:
+            self.set_name_gpt(self.namestring_gpt_rho(type = "minus"))
+        elif "DBAR " in self.name_gpt and "U " in self.name_gpt:
+            self.set_name_gpt(self.namestring_gpt_rho(type = "plus"))
+        # elif zero rho meson: ...
     def copy(self):
         mom = self.momentum.copy()
         struc = self.structure.copy()
-        new = VectorField(mom,struc)
+        explicit_mom_trafo = (self.explicit_momentum_trafo == True)
+        new = VectorField(mom,struc,explicit_momentum_trafo=explicit_mom_trafo)
+        if hasattr(self,"name_gpt"):
+            new.set_name_gpt(""+self.name_gpt)
         return new
     def update(self):
         self.structure.update()
         self.momentum.update()
         self.name = "VectorField{" + self.structure.name[3:] + "}(p=" + self.momentum.name[4:]
+        if hasattr(self,"name_gpt"):
+            self.update_name_gpt()
     def printname(self):
         self.update()
         print(self.name)
@@ -737,11 +817,17 @@ class VectorField:                               # particle with: inner vector s
         return self.structure.is_negative_of(R.structure) and self.momentum.is_equal_to(R.momentum)
     def action(self,A):
         self.structure.action(A)
-        self.momentum.inverse_action(A)
+        if not self.explicit_momentum_trafo:
+            self.momentum.inverse_action(A)
+        else:
+            self.momentum.action(A)
         self.update()
     def inverse_action(self,A):
         self.structure.inverse_action(A)
-        self.momentum.action(A)
+        if not self.explicit_momentum_trafo:
+            self.momentum.action(A)
+        else:
+            self.momentum.inverse_action(A)
         self.update()
     def set_vals(self,structure = None,momentum = None):
         if not structure == None:
@@ -750,11 +836,15 @@ class VectorField:                               # particle with: inner vector s
         if not momentum == None:
             assert isinstance(momentum,Vector)
             self.momentum = momentum
-
+    def structure_index(self):                      # returns nonzero index in structure vector (assumes there is only one nonzero entry)
+        if abs(self.structure.x) > 0:
+            return 0
+        if abs(self.structure.y) > 0:
+            return 1
+        if abs(self.structure.z) > 0:
+            return 2
 class PseudoVectorField:                               # particle with: Lorentz pseudovector structure (under rotations), momentum
-    def __init__(self,momentum,struc = None):
-        self.direction_action = "mixed"
-        # for classes with "mixed": add function left_action, check for direction_action and use left_action for rep_functions as needed
+    def __init__(self,momentum,struc = None,explicit_momentum_trafo = False):
         self.lorentz_structure = "pseudovector"
         if isinstance(momentum,Vector):
             self.momentum = momentum
@@ -768,6 +858,14 @@ class PseudoVectorField:                               # particle with: Lorentz 
         else:
             assert len(struc) == 3
             self.structure = PseudoVector(struc)
+        zero = Vector([0,0,0])
+        if self.momentum.is_equal_to(zero):
+            self.direction_action = "left"
+        else: 
+            self.direction_action = "mixed"
+        self.explicit_momentum_trafo = explicit_momentum_trafo
+        if self.explicit_momentum_trafo:             # parameter. If False: V(p)->RV(R^-1 p), if True: \psi(p)->RV(Rp) under action R
+            self.direction_action = "left"
         self.update()
     def __lt__(self,obj):
         if self.structure < obj.structure:
@@ -779,7 +877,8 @@ class PseudoVectorField:                               # particle with: Lorentz 
     def copy(self):
         mom = self.momentum.copy()
         struc = self.structure.copy()
-        new = PseudoVectorField(mom,struc)
+        explicit_mom_trafo = (self.explicit_momentum_trafo == True)
+        new = PseudoVectorField(mom,struc,explicit_momentum_trafo=explicit_mom_trafo)
         return new
     def update(self):
         self.structure.update()
@@ -794,11 +893,17 @@ class PseudoVectorField:                               # particle with: Lorentz 
         return self.structure.is_negative_of(R.structure) and self.momentum.is_equal_to(R.momentum)
     def action(self,A):
         self.structure.action(A)
-        self.momentum.inverse_action(A)
+        if not self.explicit_momentum_trafo:
+            self.momentum.inverse_action(A)
+        else:
+            self.momentum.action(A)
         self.update()
     def inverse_action(self,A):
         self.structure.inverse_action(A)
-        self.momentum.action(A)
+        if not self.explicit_momentum_trafo:
+            self.momentum.action(A)
+        else:
+            self.momentum.inverse_action(A)
         self.update()
     def set_vals(self,structure = None,momentum = None):
         if not structure == None:
@@ -807,8 +912,15 @@ class PseudoVectorField:                               # particle with: Lorentz 
         if not momentum == None:
             assert isinstance(momentum,Vector)
             self.momentum = momentum
+    def structure_index(self):                      # returns nonzero index in structure vector (assumes there is only one nonzero entry)
+        if abs(self.structure.x) > 0:
+            return 0
+        if abs(self.structure.y) > 0:
+            return 1
+        if abs(self.structure.z) > 0:
+            return 2
 class TensorField:                      # Field operator(with momentum) that transforms like the spacial components of a rank-2 Lorentz-tensor T: T^{mu,nu} -> Lambda^{rho}_mu Lambda^{sigma}_nu T^{rho,sigma} 
-                                        # not yet used for anything
+                                        # not yet used for anything. Lacks other fields' functionalities: direction_action,explicit_momentum_trafo
     def __init__(self,momentum,structure = None,sign = 1,symmetric = False,antisymmetric = False):
             self.lorentz_structure = "tensor"
             if isinstance(momentum,Vector):
@@ -855,11 +967,25 @@ class LinearCombination:
         if not label == None:
             self.set_label(label)
         assert len(basis) == len(weights)
+        weights = np.array(weights)
         for i in range(len(basis)):
-            self.lin_comb.append(TensorProduct(Scalar(weights[i]),basis[i]))
+            if hasattr(weights[i],"__len__"):
+                self.lin_comb.append(TensorProduct(Scalar(weights[i][0]),basis[i]))
+            else:
+                self.lin_comb.append(TensorProduct(Scalar(weights[i]),basis[i]))
         self.update()
     def set_label(self,label):                  # for labelling, e.g. to call some linear combination "x" 
         self.label = label
+    def set_name_gpt(self, name = None):
+        if name == None:
+            if hasattr(self.lin_comb[0].obj[1], "name_gpt"):                # concatenates names of constituents, reevaluates and rewrites first line "FACTOR .."
+                name_gpt = ""
+                relevant_factors = self.nonzero_factors()
+                for i in range(len(relevant_factors)):
+                    name_gpt += "FACTOR " + str(np.real(relevant_factors[i].obj[0].num)) + " " + str(np.imag(relevant_factors[i].obj[0].num)) + "\n"
+                    TwoPi_name_part = relevant_factors[i].obj[1].name_gpt.split("\n",1)[1]
+                    name_gpt += TwoPi_name_part + "\n"
+                self.name_gpt = name_gpt
     def copy(self):
         basis = []
         weights = []
@@ -888,9 +1014,10 @@ class LinearCombination:
         for l in self.lin_comb:
             l.update()
         ########## naming ###########
+        relevant_factors = self.nonzero_factors()
         self.name = "Linear_Comb.{"
-        for l in self.lin_comb:
-            self.name += l.obj[0].name[6:] + "*" + l.obj[1].name + "+"
+        for i in range(len(relevant_factors)):
+            self.name += relevant_factors[i].obj[0].name[6:] + "*" + relevant_factors[i].obj[1].name + "+"
         self.name =self.name[:-1] + "}"
     def printname(self):
         self.update()
@@ -920,24 +1047,6 @@ class LinearCombination:
                 # print("Exit 1")
                 return None
         return k[0]
-                
-
-            # if self.is_equal_to(s2):
-            #     return 1
-            # # if (abs(s2.a)<num_tol and abs(s2.b)<num_tol):       #case s2 == (0,0) 
-            # #     if (abs(self.a) < num_tol and abs(self.b) < num_tol):       # self == (0,0)
-            # #         return 1
-            # #     return None
-            # if not abs(self.a) < num_tol:       # case self.a != 0
-            #     k =  s2.a/self.a
-            # elif not abs(self.b) < num_tol:     #case self.b != 0
-            #     k = s2.b/self.b       
-            # else:                               #case self == (0,0) and they aren´t equal
-            #     return None                                                   
-            # scaled_s = L_Spinor(k*self.a,k*self.b)
-            # if scaled_s.is_equal_to(s2):
-            #     return k
-            # return None
     def is_equal_to(self,LC):
         # all_same = True
         # # if not all_same:
@@ -974,9 +1083,28 @@ class LinearCombination:
         for i in range(len(self.lin_comb)):
             self.lin_comb[i] = temp.lin_comb[i]
         self.update()
-                
-                
-    
+    def nonzero_factors(self):                      #returns [self.lin_comb entries with nonzero weights]         
+        nz_pairs = []   
+        for x in self.lin_comb:
+            if abs(x.obj[0].num) > num_tol:
+                nz_pairs.append(x)
+        return nz_pairs
+    def add(self,LC2):
+        for i in range(len(self.basis)):
+            assert self.basis[i].is_equal_to(LC2.basis[i])
+            self.lin_comb[i].obj[0].num+=LC2.lin_comb[i].obj[0].num
+        self.update()
+    def negative(self):
+        neg = self.copy()
+        for i in range(len(neg.lin_comb)):
+            neg.lin_comb[i].obj[0].num = (-1)* neg.lin_comb[i].obj[0].num 
+        return neg
+    def subtract(self,LC2):
+        temp = LC2.negative()
+        for i in range(len(self.basis)):
+            assert self.basis[i].is_equal_to(temp.basis[i])
+            self.lin_comb[i].obj[0].num+=temp.lin_comb[i].obj[0].num
+        self.update()
 class TensorProduct:                            # tensor product of arbitrary number and types of classes; each attribute of a TensorProduct instance is one object, e.g. VectorField
                                                 # extend to deal nicely with Scalars and their accumulative signs
     
@@ -1001,7 +1129,7 @@ class TensorProduct:                            # tensor product of arbitrary nu
         if isinstance(self.obj[0],PseudoScalarField):
             return self.obj[0].momentum < t.obj[0].momentum
         return self.obj[0] < t.obj[0]
-    def set_name_gpt(self,name = None):
+    def set_name_gpt(self,name = None):                             # generic function to set a gpt conform name. Specific functions below.
         if name == None: 
             self.name_gpt = ""
             for i in range(len(self.obj.values())):
@@ -1009,7 +1137,22 @@ class TensorProduct:                            # tensor product of arbitrary nu
                 self.name_gpt += self.obj[i].name_gpt + "\n"
         else:
             self.name_gpt = name            
-
+    def namestring_gpt_twopion(self):
+        assert len(self.obj) == 2
+        if hasattr(self.obj[0], "name_gpt") and hasattr(self.obj[1], "name_gpt"):
+            cut_name_gpt_0 = self.obj[0].name_gpt.split("\n",1)[1]
+            cut_name_gpt_1 = self.obj[1].name_gpt.split("\n",1)[1]
+            factor_gpt = self.obj[0].structure.num*self.obj[1].structure.num
+            str_factor_gpt = "FACTOR " + str(np.real(factor_gpt)) + " " + str(np.imag(factor_gpt)) + "\n"
+            total_name_gpt = str_factor_gpt + cut_name_gpt_0 + cut_name_gpt_1
+        return total_name_gpt
+    def update_name_gpt(self):
+        if len(self.obj) == 2:                          
+            if hasattr(self.obj[0],"name_gpt") and hasattr(self.obj[1],"name_gpt"):
+                if ("UBAR " in self.obj[0].name_gpt and "D " in self.obj[0].name_gpt and "DBAR " in self.obj[1].name_gpt and "U " in self.obj[1].name_gpt) or ("UBAR " in self.obj[1].name_gpt and "D " in self.obj[1].name_gpt and "DBAR " in self.obj[0].name_gpt and "U " in self.obj[0].name_gpt):
+                    self.obj[0].update_name_gpt()
+                    self.obj[1].update_name_gpt()
+                    self.set_name_gpt(self.namestring_gpt_twopion())
     def copy(self):
         temp = list(self.obj.values())
         new_obj = []
@@ -1017,6 +1160,8 @@ class TensorProduct:                            # tensor product of arbitrary nu
             new_obj.append(temp[i].copy())
         dist = (self.distinguishable == True)
         new_t = TensorProduct(*new_obj,distinguishable = dist)
+        if hasattr(self,"name_gpt"):
+            new_t.set_name_gpt(self.name_gpt)
         return new_t
     def update(self):
         self.obj[0].update()
@@ -1028,6 +1173,8 @@ class TensorProduct:                            # tensor product of arbitrary nu
             self.name+= "[dist.]"
         else:
             self.name += "[indist.]"
+        if hasattr(self,"name_gpt"):
+            self.update_name_gpt()
     def printname(self):
         self.update()
         print(self.name)
