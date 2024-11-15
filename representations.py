@@ -37,7 +37,6 @@ class Representation(g.Group):
                     eps = np.linalg.norm(np.matmul(self.hom[g],self.hom[h]) - self.hom[self.mult_table[g][h]])
                 else:                       # cases with neither right nor left action -> must be combination, which does not form homomorphism                
                     assert False
-                # eps = np.linalg.norm(np.matmul(self.hom[g],self.hom[h]) - self.hom[self.mult_table[g][h]])
                 assert eps < 1e-13
                 
     def is_reducible(self):
@@ -71,8 +70,8 @@ def matrix_from_action(A,basis,group_homomorphism = None):
                     M[j][i] = 1                                         # --> M(A)_{ji} == +/- 1
                 if basis[j].is_negative_of(acted_basis[i]):
                     M[j][i] = -1
-    # if basis[0].direction_action == "right":                            # CAREFUL with right action: M built like M.T, but application of trafo must be by right multiplication of that matrix M.T,                          
-    #     M = M.T                                                         # therefore again by left multiplication of (M.T).T
+    # CAREFUL: with right action: M is technically defined as the transpose of the above, but application of trafo must be by right multiplication of that matrix M.T,                          
+    # therefore again by left multiplication of (M.T).T -> as implemented, the difference left/right is NOT respected in the matrices, but only in check_if_homomorphism()
     return M
 
 def hom_from_action(group,basis,group_homomorphism = None):                                 # returns the dict for Rep.hom; 
@@ -275,6 +274,8 @@ def find_irreps(rep,group):             # Representation and Group objects -> di
     for irrep,chars in group.char_table.items():         
         temp = Rep.copy("temp")
         P = projector_irrep(temp,chars)
+        print("P")
+        print(P)
         apply_projector(P,temp)
         if not projected_to_zero(temp):
             result[irrep] = []
@@ -396,17 +397,6 @@ def T1_identify_components(P,Rep):          # P = [proj,mult] -> dict {"x" : v o
             components["z"].append(np.matmul(Rep.hom["Rot0"],y)) 
     else:
         print("PROBLEM: in T1_identify_components: neither left nor right action applicable.")
-    #test
-    # if Rep.direction_action == "left":
-    #     for x in components["x"]:
-    #         y = np.matmul(Rep.hom["Rot2"],x)
-    #         components["y"].append(y)
-    #         components["z"].append(np.matmul(Rep.hom["Rot0"],y))
-    # elif Rep.direction_action == "right":
-    #     for x in components["x"]:
-    #         y = np.matmul(Rep.hom["Rot2"].T,x)
-    #         components["y"].append(y)
-    #         components["z"].append(np.matmul(Rep.hom["Rot0"].T,y))
     return components
 
 def E_identify_components(P,Rep):          # P = [proj,mult] -> dict {"xx-yy": .., "xx-zz": ..} such that same array entries, e.g. dict["x"][0],dict["y"][0],.. form an inv. subspace
@@ -426,6 +416,8 @@ def E_identify_components(P,Rep):          # P = [proj,mult] -> dict {"xx-yy": .
 
 def T2_identify_components(P,Rep):          # P = [proj,mult] -> dict {"xx-yy": .., "xx-zz": ..} such that same array entries, e.g. dict["x"][0],dict["y"][0],.. form an inv. subspace
     components = {}
+    # P_t1 = np.matmul(Rep.hom["Rot2"],P[0])
+    # np.save("../results/projectors/"+Rep.name+"_T2m_t1",P_t1)
     P_orientation = list_nonzero_eigvecs(np.matmul(Rep.hom["Rot2"],P[0]))               # Eigvec with EV -1 transforms like (x_1,x_2) - (y_1,y_2) in T1m_x_T1m
     for e in list(P_orientation.keys()):
         if abs(e+1)< 1e-8:
@@ -463,6 +455,10 @@ def study_irreps(rep,group,filename):                               # find all i
     for irrep,chars in group.char_table.items():         
         temp = Rep.copy("temp")
         P = projector_irrep(temp,chars)
+        np.save("../results/projectors/"+rep.name+"_"+irrep,P)
+        if irrep == "T2m":
+            P_t1 = np.matmul(Rep.hom["Rot2"],P)
+            np.save("../results/projectors/"+Rep.name+"_T2m_t1",P_t1)
         apply_projector(P,temp)
         if not projected_to_zero(temp):
             P_irrep[irrep] = []
@@ -576,7 +572,7 @@ def subtract_for_zero_entries(u,v):             #subtracts vector v from u such 
                 break
         i += 1
         if i > len(u)+1:
-            print("In subtract_for_zero_entries: FAIL: no nonzero entries.")
+            print("In subtract_for_zero_entries: only entries of zero.")
             i = 0
             break
     f = complex(10000000000*u[i]/(100000000000*v[i]))

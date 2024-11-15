@@ -133,6 +133,10 @@ irrep_folder_prefix = "I1_"
 operator_name = "2pi.g5.1.1.1"
 # to be put together for a total filepath of: master_filepath/irrep_folder_prefix + <irrep_name> + /<int as basis vector enumerator>/operator_name
 for irrep,spaces in subspaces_LC_labelled.items():
-    for space in spaces:
-        folder_name = irrep_folder_prefix + irrep.upper() + "/"
-        t.create_operator_files(space,master_filepath=master_filepath,irrep_folder=folder_name,filename=operator_name)
+    for i in range(len(spaces)):
+        if i == 0: 
+            folder_name = irrep_folder_prefix + irrep.upper() + "/"
+            t.create_operator_files(spaces[i],master_filepath=master_filepath,irrep_folder=folder_name,filename=operator_name)
+        else: 
+            folder_name = irrep_folder_prefix + irrep.upper() + "/"
+            t.create_operator_files(spaces[i],master_filepath=master_filepath,irrep_folder=folder_name,filename=operator_name+".v"+str(i+1))

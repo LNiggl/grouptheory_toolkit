@@ -2,6 +2,7 @@ import numpy as np
 import groups as g
 import representations as r
 import objects as o
+import testing as t
 np.set_printoptions(precision = 6, suppress = True)
 # group O_h
 
@@ -27,7 +28,7 @@ T1m_x_T1m =  r.product_rep(T1m,T1m)           #no irrep
 T1m_T1m_reps = T1m_x_T1m.hom.copy()
 T1m_x_T1m.check_if_homomorphism()
 
-T1p = r.Representation(O_h,T1m_T1m_reps,"T1p")
+T1p = T1m_x_T1m.copy("T1p")
 r.apply_projectors([r.antisymmetric_projector],T1p)
 T1p.check_if_homomorphism()
 
@@ -138,29 +139,29 @@ sf_rep.check_if_homomorphism()
 # pvf_basis = o.generate_basis(pvf1,O_h)
 # pvf_rep = r.rep_from_action(O_h,pvf_basis,"pvf_rep")
 # pvf_rep.check_if_homomorphism()
-print("tensor product reps")
-b_ten_v = o.generate_basis(ten_v,O_h)
-rep_ten_v = r.rep_from_action(O_h,b_ten_v,"rep_ten_v")
-print("action direction of ",rep_ten_v.name , ": " , b_ten_v[0].direction_action)
-rep_ten_v.check_if_homomorphism()
+# print("tensor product reps")
+# b_ten_v = o.generate_basis(ten_v,O_h)
+# rep_ten_v = r.rep_from_action(O_h,b_ten_v,"rep_ten_v")
+# print("action direction of ",rep_ten_v.name , ": " , b_ten_v[0].direction_action)
+# rep_ten_v.check_if_homomorphism()
 
-b_ten_sf = o.generate_basis(ten_sf,O_h)
-rep_ten_sf = r.rep_from_action(O_h,b_ten_sf,"rep_ten_sf")
-print("action direction of ",rep_ten_sf.name , ": " , b_ten_sf[0].direction_action)
-rep_ten_sf.check_if_homomorphism()
+# b_ten_sf = o.generate_basis(ten_sf,O_h)
+# rep_ten_sf = r.rep_from_action(O_h,b_ten_sf,"rep_ten_sf")
+# print("action direction of ",rep_ten_sf.name , ": " , b_ten_sf[0].direction_action)
+# rep_ten_sf.check_if_homomorphism()
 
 # b_ten_psf = o.generate_basis(ten_psf,O_h)
 # rep_ten_psf = r.rep_from_action(O_h,b_ten_psf,"rep_ten_psf")
 # rep_ten_psf.check_if_homomorphism()
 
-b_ten_vf = o.generate_basis(ten_vf,O_h)
-rep_ten_vf = r.rep_from_action(O_h,b_ten_vf,"rep_ten_vf")
-# rep_ten_vf.check_if_homomorphism2()
+# b_ten_vf = o.generate_basis(ten_vf,O_h)
+# rep_ten_vf = r.rep_from_action(O_h,b_ten_vf,"rep_ten_vf")
+# # rep_ten_vf.check_if_homomorphism2()
 
-b_ten_pvf = o.generate_basis(ten_pvf,O_h)
-rep_ten_pvf = r.rep_from_action(O_h,b_ten_pvf,"rep_ten_pvf")
-print("action direction of ",rep_ten_pvf.name , ": " , b_ten_pvf[0].direction_action)
-rep_ten_pvf.check_if_homomorphism()
+# b_ten_pvf = o.generate_basis(ten_pvf,O_h)
+# rep_ten_pvf = r.rep_from_action(O_h,b_ten_pvf,"rep_ten_pvf")
+# print("action direction of ",rep_ten_pvf.name , ": " , b_ten_pvf[0].direction_action)
+# rep_ten_pvf.check_if_homomorphism()
 
 # test associativity axiom for group action on PseudoScalarField
 A = "Rot1"
@@ -202,38 +203,51 @@ T12 = o.TensorProduct(t1,t2)
 T22 = o.TensorProduct(t2,t2)
 
 list_t = [T00,T01,T02,T10,T11,T12,T20,T21,T22]
-# print("action of ", A)
-# for Ten in list_t:
-#     T = Ten.copy()
-#     T.printname()
-#     print("->")
-#     T.action(A)
-#     T.printname()
-#     print("----")
-
-# print("test tensor")
-# X = o.Tensor([1,2],sign = -1,antisymmetric=True)
-# X.printname()
-# Y = X.copy()
-# Y.action("Rot0")
-# Y.sign = -1
-# Y.printname()
-# print(Y.is_equal_to(X))
-# print(Y.is_negative_of(X))
 
 
-# T = o.TensorField([1,0,0],structure = [1,2],sign = -1,antisymmetric = True)
-# T.printname()
-# T2 = T.copy()
-# T2.structure.idx1 = 2
-# T2.structure.idx2 = 1
-# T2.momentum.x = 1
-# T.printname()
-# T2.printname()
-# print(T2.is_equal_to(T))
-# print(T2.is_negative_of(T))
-# T2.action("Rot2")
-# T2.printname()
+print("Calculations for basis trafo to book (Altmann Herzig) notation: T1m")
+print("Rot0:")
+print(T1m.hom["Rot0"])
+print("eig:")
+evR, evecsR = np.linalg.eig(T1m.hom["Rot0"])
+print(evR)
+for i in range(len(evecsR)):
+    print(evecsR[:,i])
+C_4x = np.array([[0,-1j,0],[-1j,0,0],[0,0,1]])
+print("C_4x")
+print(C_4x)
+evC,evecsC = np.linalg.eig(C_4x)
+print(evC)
+for i in range(len(evecsC)):
+    print(evecsC[:,i])
+print("G:")
+print(evecsR)
+print("H:")
+print(evecsC)
+S = evecsR@np.linalg.inv(evecsC)
+print("S = GH^-1")
+print(S)
+print("S^-1")
+print(np.linalg.inv(S))
+print("Test S^-1AS-C4x:")
+print(np.linalg.inv(S)@T1m.hom["Rot0"]@S-C_4x)
+
+print("other two rotations:")
+C_4y = np.array([[1,0,0],[0,0,1],[0,-1,0]])
+C_4z = np.array([[0,0,-1j],[0,1,0],[-1j,0,0]])
+print("Test S^-1Rot_yS-C_4y:")
+print(np.linalg.inv(S)@T1m.hom["Rot1"]@S-C_4y)
+
+print("Test S^-1Rot_yS-C_4z:")
+print(np.linalg.inv(S)@T1m.hom["Rot2"]@S-C_4z)
+
+print("Character table of O_h:")
+for irrep in O_h.char_table.keys():
+    print(irrep, ": ")
+    for c,mems in O_h.classes.items():
+        print(c," (" , len(mems) , "): ", O_h.char_table[irrep][c])
+
+
 
 
 

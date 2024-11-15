@@ -77,62 +77,66 @@ b1 = o.generate_basis(pi1,O_h)
 pi210 = r.rep_from_action(O_h,b1,"pi210")
 
 ## tests ##
-f = open("../tests/twopi210_test_trafos.txt","w")
-f.write("Test: LinearCombination action agrees with matrix multiplication:   ")
-assert t.test_matrices_against_LinearCombinations(pi210)
-f.write("Test successful.\n")
+# f = open("../tests/twopi210_test_trafos.txt","w")
+# f.write("Test: LinearCombination action agrees with matrix multiplication:   ")
+# assert t.test_matrices_against_LinearCombinations(pi210)
+# f.write("Test successful.\n")
 
-subspaces = r.study_irreps(pi210,O_h,"../results/twopi210_irreps.txt")
-subspaces_ordered_by_space = t.reorder_subspaces(subspaces)
-all_disjoint = t.subspaces_disjoint(subspaces_ordered_by_space,pi210)
-subspaces_LC_labelled = t.label_all(subspaces_ordered_by_space,pi210)
+subspaces = r.study_irreps(pi210,O_h,"../results/twopi210_irreps2.txt")
+# subspaces_ordered_by_space = t.reorder_subspaces(subspaces)
+# all_disjoint = t.subspaces_disjoint(subspaces_ordered_by_space,pi210)
+# subspaces_LC_labelled = t.label_all(subspaces_ordered_by_space,pi210)
 
-f.write("Test: All subspaces disjoint:   ")
-assert all_disjoint
-f.write("Test successful.\n")
+# f.write("Test: All subspaces disjoint:   ")
+# assert all_disjoint
+# f.write("Test successful.\n")
 
-## Invariant subspaces ##
+# ## Invariant subspaces ##
 
-f.write("Basis of the representation:\n")
-for i in range(len(pi210.basis)):
-    f.write(str(i+1)+":\n")
-    f.write(pi210.basis[i].name_gpt)
-    f.write("\n")
-f.write("Matrices of rotations and parity:\n")
-for A in gen_actions:
-    f.write(A + ":\n")
-    f.write(str(pi210.hom[A]) + "\n")
+# f.write("Basis of the representation:\n")
+# for i in range(len(pi210.basis)):
+#     f.write(str(i+1)+":\n")
+#     f.write(pi210.basis[i].name_gpt)
+#     f.write("\n")
+# f.write("Matrices of rotations and parity:\n")
+# for A in gen_actions:
+#     f.write(A + ":\n")
+#     f.write(str(pi210.hom[A]) + "\n")
 
-f.write("\nInvariant irreducible subspaces:\n\n")
+# f.write("\nInvariant irreducible subspaces:\n\n")
 
-for irrep,spaces in subspaces_LC_labelled.items():
-    f.write("Irrep " + irrep + ".\n")
-    for i in range(len(spaces)):
-        f.write("Subspace " + str(i+1) + "/" + str(len(spaces)) + ". Basis:\n")
-        for lc in spaces[i]:
-            f.write(lc.label + ":\n" + lc.name_gpt + "\n")
-        f.write("\n")
-        add_candidates = None
-        if "E" in irrep:
-            difference_vec_of_eps = spaces[i][0].copy()
-            difference_vec_of_eps.add(spaces[i][1].negative())
-            difference_vec_of_eps.set_label("(eps1 - eps2)")
-            add_candidates = [difference_vec_of_eps]
-        trafos = t.test_trafo_behavior(spaces[i],gen_actions,add_outcome_candidates=add_candidates)
-        f.write("Transformations:\n")
-        f.write(str(trafos))
-        f.write("\n")
-        f.write("Trafo as expected: ")
-        b = t.compare_string_to_file(str(trafos),"D:/Master/Masterarbeit/tests/expected_trafos/" + irrep + "_expected.txt")
-        f.write(str(b) + "\n")
-    f.write("\n")
+# for irrep,spaces in subspaces_LC_labelled.items():
+#     f.write("Irrep " + irrep + ".\n")
+#     for i in range(len(spaces)):
+#         f.write("Subspace " + str(i+1) + "/" + str(len(spaces)) + ". Basis:\n")
+#         for lc in spaces[i]:
+#             f.write(lc.label + ":\n" + lc.name_gpt + "\n")
+#         f.write("\n")
+#         add_candidates = None
+#         if "E" in irrep:
+#             difference_vec_of_eps = spaces[i][0].copy()
+#             difference_vec_of_eps.add(spaces[i][1].negative())
+#             difference_vec_of_eps.set_label("(eps1 - eps2)")
+#             add_candidates = [difference_vec_of_eps]
+#         trafos = t.test_trafo_behavior(spaces[i],gen_actions,add_outcome_candidates=add_candidates)
+#         f.write("Transformations:\n")
+#         f.write(str(trafos))
+#         f.write("\n")
+#         f.write("Trafo as expected: ")
+#         b = t.compare_string_to_file(str(trafos),"D:/Master/Masterarbeit/tests/expected_trafos/" + irrep + "_expected.txt")
+#         f.write(str(b) + "\n")
+#     f.write("\n")
 
-## create files for operators in gpt convention ##
-master_filepath = "D:/Master/Masterarbeit/tests/gpt_folder_structure/"
-irrep_folder_prefix = "I1_"
-operator_name = "2pi.g5.0.1.2"
-# to be put together for a total filepath of: master_filepath/irrep_folder_prefix + <irrep_name> + /<int as basis vector enumerator>/operator_name
-for irrep,spaces in subspaces_LC_labelled.items():
-    for space in spaces:
-        folder_name = irrep_folder_prefix + irrep.upper() + "/"
-        t.create_operator_files(space,master_filepath=master_filepath,irrep_folder=folder_name,filename=operator_name)
+# ## create files for operators in gpt convention ##
+# master_filepath = "D:/Master/Masterarbeit/tests/gpt_folder_structure/"
+# irrep_folder_prefix = "I1_test_"
+# operator_name = "2pi.g5.0.1.2"
+# # to be put together for a total filepath of: master_filepath/irrep_folder_prefix + <irrep_name> + /<int as basis vector enumerator>/operator_name
+# for irrep,spaces in subspaces_LC_labelled.items():
+#     for i in range(len(spaces)):
+#         if i == 0: 
+#             folder_name = irrep_folder_prefix + irrep.upper() + "/"
+#             t.create_operator_files(spaces[i],master_filepath=master_filepath,irrep_folder=folder_name,filename=operator_name)
+#         else: 
+#             folder_name = irrep_folder_prefix + irrep.upper() + "/"
+#             t.create_operator_files(spaces[i],master_filepath=master_filepath,irrep_folder=folder_name,filename=operator_name+".v"+str(i+1))

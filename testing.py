@@ -4,34 +4,20 @@ import objects as o
 import representations as r
 def matrix_equals_LinComb_approach(A,Rep,vec):       # apply transformation two ways: 1. matrix mult of Rep.hom[A]*vec; 2. Via LinearCombination objects -> compare
     #direct trafo of LinearCombination
-    weights1 = list(complex(vec[i]) for i in range(len(vec)))
-    
+    weights1 = list(complex(vec[i]) for i in range(len(vec)))    
     LinComb1 = o.LinearCombination(Rep.basis,weights1)
-    # print("vector")
-    # print(LinComb1.name)
     LinComb1.action(A)
-    # print("after action", A, " directly")
-    # print(LinComb1.name)
-    #matrix multiplication
-    # print("In matrix_equals_LinComb_approach: matrix ", A)
-    # print(Rep.hom[A])
     if Rep.direction_action == "right":
         vec2 = np.matmul(Rep.hom[A],vec)
     else: 
         vec2 = np.matmul(Rep.hom[A],vec)
-    # print("In matrix_equals_LinComb_approach: result of matrix mult for:", A)
-    # print(vec2)
     weights2 = list(complex(vec2[i]) for i in range(len(vec2)))
     LinComb2 = o.LinearCombination(Rep.basis,weights2)
     if not LinComb1.is_equal_to(LinComb2):
-        # print("result of LinComb Trafo:")
         l = []
         for i in range(len(LinComb1.lin_comb)):
-            l.append(LinComb1.lin_comb[i].obj[0].num)
-        # print(l)
-        # print("result of matrix mult:")
-        # print(weights2)
-        print("differences in approaches:")
+            l.append(LinComb1.lin_comb[i].obj[0].num)        
+        print("WARNING: in matrix_equals_LinComb_approach: differences in approaches:")
         for i in range(len(weights2)):
             print(weights2[i]-l[i])
     return LinComb1.is_equal_to(LinComb2)
@@ -75,6 +61,7 @@ def subspaces_disjoint(dict_spaces,Rep):                    # dict_spaces: {key:
                 print(j,i,": not disjoint")
                 disjoint = False
         j += 1
+    print("Test complete.")
     return disjoint
 
 def reorder_subspaces(subspaces):                   # takes study_irreps output. Returns {irrepname : [[vector(s) of 1st subspace],[vector(s) of 2nd subspace],.. (each in order as r.<..>_identify_components functions yield, e.g. [x,y,z])]}
@@ -224,22 +211,7 @@ def compare_string_to_file(string1,file2):                               #return
     with open(file2,"r") as f2:
         string2 = f2.read()
         return string1 == string2
-##testing stuff #######
-# vec1 = o.Vector([1,0,0])
-# vec2 = o.Vector([0,1,0])
-# vec3 = o.Vector([0,0,1])
-# basis = [vec1,vec2,vec3]
 
-# LC1 = o.LinearCombination(basis,[1,0,0], label = "x")
-# LC2 = o.LinearCombination(basis,[0,1,0], label = "y")
-
-# LC1.add(LC2)
-# print(LC1.name)
-# LC1.add(LC2.negative())
-# lc3 = LC2.negative()
-# print(lc3.name)
-# print(LC2.negative().name)
-# print(LC1.name)
 
 
 

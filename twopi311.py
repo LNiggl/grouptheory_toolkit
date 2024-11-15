@@ -66,26 +66,26 @@ O_h.set_char_table(list_irreps)
 
 #(1,1,0) - type 2Pion    
 
-p1 = o.PseudoScalarField([2,1,1],explicit_momentum_trafo=True)
-p2 = o.PseudoScalarField([-2,-1,-1],explicit_momentum_trafo=True)
+p1 = o.PseudoScalarField([3,1,1],explicit_momentum_trafo=True)
+p2 = o.PseudoScalarField([-3,-1,-1],explicit_momentum_trafo=True)
 pi1 = o.TensorProduct(p1,p2)
 p1.set_name_gpt(p1.namestring_gpt_pion("minus"))
 p2.set_name_gpt(p2.namestring_gpt_pion("plus"))
 pi1.set_name_gpt(pi1.namestring_gpt_twopion())
 
 b1 = o.generate_basis(pi1,O_h)
-pi211 = r.rep_from_action(O_h,b1,"pi211")
+pi311 = r.rep_from_action(O_h,b1,"pi311")
 
 ## tests ##
-f = open("../tests/twopi211_test_trafos.txt","w")
+f = open("../tests/twopi311_test_trafos.txt","w")
 f.write("Test: LinearCombination action agrees with matrix multiplication:   ")
-assert t.test_matrices_against_LinearCombinations(pi211)
+assert t.test_matrices_against_LinearCombinations(pi311)
 f.write("Test successful.\n")
 
-subspaces = r.study_irreps(pi211,O_h,"../results/twopi211_irreps.txt")
+subspaces = r.study_irreps(pi311,O_h,"../results/twopi311_irreps.txt")
 subspaces_ordered_by_space = t.reorder_subspaces(subspaces)
-all_disjoint = t.subspaces_disjoint(subspaces_ordered_by_space,pi211)
-subspaces_LC_labelled = t.label_all(subspaces_ordered_by_space,pi211)
+all_disjoint = t.subspaces_disjoint(subspaces_ordered_by_space,pi311)
+subspaces_LC_labelled = t.label_all(subspaces_ordered_by_space,pi311)
 
 f.write("Test: All subspaces disjoint:   ")
 assert all_disjoint
@@ -94,14 +94,14 @@ f.write("Test successful.\n")
 ## Invariant subspaces ##
 
 f.write("Basis of the representation:\n")
-for i in range(len(pi211.basis)):
+for i in range(len(pi311.basis)):
     f.write(str(i+1)+":\n")
-    f.write(pi211.basis[i].name_gpt)
+    f.write(pi311.basis[i].name_gpt)
     f.write("\n")
 f.write("Matrices of rotations and parity:\n")
 for A in gen_actions:
     f.write(A + ":\n")
-    f.write(str(pi211.hom[A]) + "\n")
+    f.write(str(pi311.hom[A]) + "\n")
 
 f.write("\nInvariant irreducible subspaces:\n\n")
 
@@ -130,7 +130,7 @@ for irrep,spaces in subspaces_LC_labelled.items():
 ## create files for operators in gpt convention ##
 master_filepath = "D:/Master/Masterarbeit/tests/gpt_folder_structure/"
 irrep_folder_prefix = "I1_"
-operator_name = "2pi.g5.1.1.2"
+operator_name = "2pi.g5.1.1.3"
 # to be put together for a total filepath of: master_filepath/irrep_folder_prefix + <irrep_name> + /<int as basis vector enumerator>/operator_name
 for irrep,spaces in subspaces_LC_labelled.items():
     for i in range(len(spaces)):
