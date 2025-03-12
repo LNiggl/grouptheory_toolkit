@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import linalg
 gamma = {                                                                   # gamma matrices copied from github.com/lehner/gpt/blob/master/lib/gpt/core/gamma.py
     0: np.array(
         [[0, 0, 0, 1j], [0, 0, 1j, 0], [0, -1j, 0, 0], [-1j, 0, 0, 0]],         #x
@@ -31,3 +32,17 @@ for mu in range(3):
             for sigma in range(3):
                 assert (comm(S[(mu,nu)],S[(rho,sigma)]) == np.eye(4)[nu][rho]*S[(mu,sigma)] - np.eye(4)[mu][rho]*S[(nu,sigma)]
                          + np.eye(4)[mu][sigma]*S[(nu,rho)] - np.eye(4)[nu][sigma]*S[(mu,rho)]).all()
+                
+## compute rotations by 90 degrees from generators
+
+#R_z: S_01 = -S_10 = -pi/2, etc...
+R_z = linalg.expm(1/2*2*(-np.pi)/2*S[(0,1)])
+R_y = linalg.expm(1/2*2*(-np.pi)/2*S[(0,2)])
+R_x = linalg.expm(1/2*2*(-np.pi)/2*S[(1,2)])
+
+print(R_z)
+# print(R_y)
+# print(R_x)
+
+
+# print(S[1,2])

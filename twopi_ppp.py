@@ -7,30 +7,30 @@ from base import O_h,gen_actions_O_h                    # import group list of a
 
 #(1,0,0) - type 2Pion    
 filepath = "D:/Master/Masterarbeit/results/twopi/data/"
-name = "twopi100"
-p1 = o.PseudoScalarField([1,0,0],modified_momentum_trafo=True)
-p2 = o.PseudoScalarField([-1,0,0],modified_momentum_trafo=True)
+name = "twopippp"
+p1 = o.PseudoScalarField(["p","p","p"],modified_momentum_trafo=True)
+p2 = o.PseudoScalarField(["-p","-p","-p"],modified_momentum_trafo=True)
 pi1 = o.TensorProduct(p1,p2)
 p1.set_name_gpt(p1.namestring_gpt_pion("minus"))
 p2.set_name_gpt(p2.namestring_gpt_pion("plus"))
 pi1.set_name_gpt(pi1.namestring_gpt_twopion())
 
 b1 = o.generate_basis(pi1,O_h)
-pi100 = r.rep_from_action(O_h,b1,"twopi100")
+pippp = r.rep_from_action(O_h,b1,"twopippp")
 
 ## tests ##
 f = open(filepath + "tests/" + name + "_trafos.txt", "w")
 f.write("Test: LinearCombination action agrees with matrix multiplication:   ")
-assert t.test_matrices_against_LinearCombinations(pi100)
+assert t.test_matrices_against_LinearCombinations(pippp)
 f.write("Test successful.\n")
 
-subspaces = r.study_irreps(pi100,O_h,filepath + "summary_irreps/" + name + ".txt")
+subspaces = r.study_irreps(pippp,O_h,filepath + "summary_irreps/" + name + ".txt")
 subspaces_ordered_by_space = t.reorder_subspaces(subspaces)
-t.export_vectors(subspaces_ordered_by_space,filepath + name + "_vecdata", real = True) # D:/Master/Masterarbeit/results/test_01/twopi100_vecdata", real = True)
+t.export_vectors(subspaces_ordered_by_space,filepath + name + "_vecdata", real = True) # D:/Master/Masterarbeit/results/test_01/twopippp_vecdata", real = True)
 # import sys
 # sys.exit()
-all_disjoint = t.subspaces_disjoint(subspaces_ordered_by_space,pi100)
-subspaces_LC_labelled = t.label_all(subspaces_ordered_by_space,pi100)
+all_disjoint = t.subspaces_disjoint(subspaces_ordered_by_space,pippp)
+subspaces_LC_labelled = t.label_all(subspaces_ordered_by_space,pippp)
 
 f.write("Test: All subspaces disjoint:   ")
 assert all_disjoint
@@ -39,14 +39,14 @@ f.write("Test successful.\n")
 ## Invariant subspaces ##
 
 f.write("Basis of the representation:\n")
-for i in range(len(pi100.basis)):
+for i in range(len(pippp.basis)):
     f.write(str(i+1)+":\n")
-    f.write(pi100.basis[i].name_gpt)
+    f.write(pippp.basis[i].name_gpt)
     f.write("\n")
 # f.write("Matrices of rotations and parity:\n")
 # for A in gen_actions_O_h:
 #     f.write(A + ":\n")
-#     f.write(str(pi100.hom[A]) + "\n")
+#     f.write(str(pippp.hom[A]) + "\n")
 
 f.write("\nInvariant irreducible subspaces:\n\n")
 
@@ -74,15 +74,15 @@ for irrep,spaces in subspaces_LC_labelled.items():
     f.write("\n")
 
 ## create files for operators in gpt convention ##
-master_filepath = filepath + "files_operators_gpt/" # D:/Master/Masterarbeit/results/files_operators_gpt/"
-irrep_folder_prefix = "I1_"
-operator_name = "2pi.g5.0.0.1"
-# to be put together for a total filepath of: master_filepath/irrep_folder_prefix + <irrep_name> + /<int as basis vector enumerator>/operator_name
-for irrep,spaces in subspaces_LC_labelled.items():
-    for i in range(len(spaces)):
-        if i == 0: 
-            folder_name = irrep_folder_prefix + irrep.upper() + "/"
-            t.create_operator_files(spaces[i],master_filepath=master_filepath,irrep_folder=folder_name,filename=operator_name)
-        else: 
-            folder_name = irrep_folder_prefix + irrep.upper() + "/"
-            t.create_operator_files(spaces[i],master_filepath=master_filepath,irrep_folder=folder_name,filename=operator_name+".v"+str(i+1))
+# master_filepath = filepath + "files_operators_gpt/" # D:/Master/Masterarbeit/results/files_operators_gpt/"
+# irrep_folder_prefix = "I1_"
+# operator_name = "2pi.g5.0.0.1"
+# # to be put together for a total filepath of: master_filepath/irrep_folder_prefix + <irrep_name> + /<int as basis vector enumerator>/operator_name
+# for irrep,spaces in subspaces_LC_labelled.items():
+#     for i in range(len(spaces)):
+#         if i == 0: 
+#             folder_name = irrep_folder_prefix + irrep.upper() + "/"
+#             t.create_operator_files(spaces[i],master_filepath=master_filepath,irrep_folder=folder_name,filename=operator_name)
+#         else: 
+#             folder_name = irrep_folder_prefix + irrep.upper() + "/"
+#             t.create_operator_files(spaces[i],master_filepath=master_filepath,irrep_folder=folder_name,filename=operator_name+".v"+str(i+1))

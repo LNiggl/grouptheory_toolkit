@@ -1,7 +1,12 @@
+if __name__ == "__main__":
+    print("a", ord('a'))
+    print("-", ord('-'))
+    print("0" , ord('0'))
+
 import numpy as np
-import groups as g
-import objects as o
-import representations as r
+from base import groups as g
+from base import objects as o
+# import representations as r
 def matrix_equals_LinComb_approach(A,Rep,vec):       # apply transformation two ways: 1. matrix mult of Rep.hom[A]*vec; 2. Via LinearCombination objects -> compare
     #direct trafo of LinearCombination
     weights1 = list(complex(vec[i]) for i in range(len(vec)))    
@@ -38,13 +43,14 @@ def test_matrices_against_LinearCombinations(Rep):
         if not matrices_agree_with_LinComb_objects(Rep,weights[i]):  # check approach for all basis vectors
             all_good = False
     return all_good
-def subspaces_disjoint(dict_spaces,Rep):                    # dict_spaces: {key: [[vectors of subspace1],[vectors of subspace2], ..]} -> returns true if all spaces are disjoint under all group operations         
+def subspaces_disjoint(dict_spaces,Rep):                    # takes dict_spaces: {key: [[vectors of subspace1],[vectors of subspace2], ..]} -> returns true if all spaces are disjoint under all group operations         
     subspaces = []
     for irrep,vecs_list in dict_spaces.items():
+        print(irrep)
         for vecs in vecs_list:
             Orb = []
             for vec in vecs:
-                
+                vec = np.array(vec)
                 weights = list(complex(vec[i]) for i in range(len(vec)))
                 LC = o.LinearCombination(Rep.basis,weights)
                 result = o.true_orbit(LC,Rep.group)
@@ -76,6 +82,36 @@ def reorder_subspaces(subspaces):                   # takes study_irreps output.
                 subspace.append(evecs_list[component][j])
             subspaces_reordered[irrep].append(subspace)
     return subspaces_reordered
+
+def export_vectors(subspaces,filename,real = False):                     # takes output of reorder_subspaces; real: only export real part of complex vectors, note of largest imag omission in seq file
+                                                            # writes them in a .npy file as 2dim array
+    
+    all_vectors = []
+    irreps_sequence = []
+    if real:
+        largest_abs_imag = 0
+    for irrep in subspaces.keys():
+        for i in range(len(subspaces[irrep])):
+            for j in range(len(subspaces[irrep][i])):
+                temp = []
+                for k in range(len(subspaces[irrep][i][j])):
+                    if real:
+                        x = subspaces[irrep][i][j][k].item()
+                        temp.append(x.real)
+                        if abs(largest_abs_imag)-abs(subspaces[irrep][i][j][k].item().imag) < 0:
+                            largest_abs_imag = subspaces[irrep][i][j][k].item().imag 
+                    else:
+                        temp.append(subspaces[irrep][i][j][k].item())
+                all_vectors.append(temp)
+            irreps_sequence.append(irrep)
+    all_vectors = np.array(all_vectors)
+    if real:
+        irreps_sequence.append(largest_abs_imag)
+        print("in " + filename + " largest imag: " +  str(largest_abs_imag))
+    np.save(filename,all_vectors)
+    np.save(filename+"_irreps_seq",irreps_sequence)
+
+
 
 ## functions for labelling subspace vectors -> use after applying reorder subspaces
 def A_labelling(vec,rep):
@@ -211,6 +247,9 @@ def compare_string_to_file(string1,file2):                               #return
     with open(file2,"r") as f2:
         string2 = f2.read()
         return string1 == string2
+    
+
+
 
 
 

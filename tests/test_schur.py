@@ -1,4 +1,6 @@
 import numpy as np
+import representations as r
+import compare as c
 from scipy.linalg import schur,eigvals,solve
 P = np.load("../results/projectors/Rep_T2m_t1.npy")
 np.save("./projector",P)
@@ -21,6 +23,12 @@ for i in range(len(ev_nonzero)):
     evec = solve(np.diag(ev_i)-P,np.zeros(len(P)))
     evecs.append(evec)
 print(evecs)
+f = open("../tests/test_list_nonzero_eigvals2.txt","w")
+d = r.list_nonzero_eigvecs(P)
+f.write(str(d))
+f.close()
+
+c.compare_strings("../tests/test_list_nonzero_eigvals.txt","../tests/test_list_nonzero_eigvals2.txt")
 
 
 

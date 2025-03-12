@@ -1,89 +1,32 @@
 import numpy as np
-import groups as g
-import objects as o
-import representations as r
-import testing as t
-gen_actions = ["Rot0","Rot1","Rot2","Inv"]
-v = o.Vector(["a","b","c"])
-ac = o.find_closure(gen_actions,v)
-mt = o.mult_table_from_actions(ac)
-O_h = o.generate_group(gen_actions,v)
-
-# irreps of O_h
-
-a = [o.Scalar(1)]
-A1p = r.rep_from_action(O_h,a,"A1p")
-A1p.check_if_homomorphism()
-
-b = o.generate_basis([o.Vector([1,0,0])],O_h)
-T1m = r.rep_from_action(O_h,b,"T1m")
-T1m.check_if_homomorphism()
-
-ps = o.PseudoScalar(1)
-b_ps = o.generate_basis([ps],O_h)
-A1m = r.rep_from_action(O_h,b_ps,"A1m")
-
-T1m_x_T1m =  r.product_rep(T1m,T1m)           #no irrep
-# T1m_T1m_reps = T1m_x_T1m.hom.copy()
-T1m_x_T1m.check_if_homomorphism()
-
-# T1p = r.Representation(O_h,T1m_T1m_reps,"T1p")
-T1p = T1m_x_T1m.copy("T1p")
-r.apply_projectors([r.antisymmetric_projector],T1p)
-T1p.check_if_homomorphism()
-
-T2p = T1m_x_T1m.copy("T2p")
-r.apply_projectors([r.symmetric_projector,r.invert_projector(r.diagonal_projector)],T2p)
-T2p.check_if_homomorphism()
-
-T2m = r.product_rep(T2p,A1m)
-T2m.name = "T2m"
-T2m.check_if_homomorphism()
-
-Ep = T1m_x_T1m.copy("Ep")
-r.apply_projectors([r.traceless_projector,r.diagonal_projector],Ep)
-Ep.check_if_homomorphism()
-# Ep.round_chars()
-
-Em = r.product_rep(Ep,A1m)
-Em.name = "Em"
-Em.check_if_homomorphism()
-# Em.round_chars()
-
-A2m = r.product_rep(T1m,r.product_rep(T1m,T1m))
-A2m.name = "A2m"
-r.project_out_irreps(A2m, [A1p,A1m,T1m,T1p,T2p,T2m,Em,Ep])
-A2m.check_if_homomorphism()
-# A2m.round_chars()
-
-A2p = r.product_rep(A2m,A1m)
-A2p.name = "A2p"
-A2p.check_if_homomorphism()
-
-
-list_irreps = [A1m,A1p,T1m,T1p,A2m,A2p,T2m,T2p,Em,Ep]
-O_h.set_char_table(list_irreps)
+from base import groups as g
+from base import objects as o
+from base import representations as r
+from base import testing as t
+from base import O_h,gen_actions_O_h                    # import group list of actions used in generation of O_h
 
 #(1,1,0) - type 2Pion    
-
-p1 = o.PseudoScalarField([1,1,0],explicit_momentum_trafo=True)
-p2 = o.PseudoScalarField([-1,-1,0],explicit_momentum_trafo=True)
+filepath = "D:/Master/Masterarbeit/results/twopi/data/"
+name = "twopi110"
+p1 = o.PseudoScalarField([1,1,0],modified_momentum_trafo=True)
+p2 = o.PseudoScalarField([-1,-1,0],modified_momentum_trafo=True)
 pi1 = o.TensorProduct(p1,p2)
 p1.set_name_gpt(p1.namestring_gpt_pion("minus"))
 p2.set_name_gpt(p2.namestring_gpt_pion("plus"))
 pi1.set_name_gpt(pi1.namestring_gpt_twopion())
 
 b1 = o.generate_basis(pi1,O_h)
-pi110 = r.rep_from_action(O_h,b1,"pi110")
+pi110 = r.rep_from_action(O_h,b1,"twopi110")
 
 ## tests ##
-f = open("../tests/twopi110_test_trafos.txt","w")
+f = open(filepath + "tests/" + name + "_trafos.txt", "w")
 f.write("Test: LinearCombination action agrees with matrix multiplication:   ")
 assert t.test_matrices_against_LinearCombinations(pi110)
 f.write("Test successful.\n")
 
-subspaces = r.study_irreps(pi110,O_h,"../results/twopi110_irreps.txt")
+subspaces = r.study_irreps(pi110,O_h,filepath + "summary_irreps/" + name + ".txt")
 subspaces_ordered_by_space = t.reorder_subspaces(subspaces)
+t.export_vectors(subspaces_ordered_by_space,filepath + name + "_vecdata", real = True)
 all_disjoint = t.subspaces_disjoint(subspaces_ordered_by_space,pi110)
 subspaces_LC_labelled = t.label_all(subspaces_ordered_by_space,pi110)
 
@@ -99,7 +42,7 @@ for i in range(len(pi110.basis)):
     f.write(pi110.basis[i].name_gpt)
     f.write("\n")
 f.write("Matrices of rotations and parity:\n")
-for A in gen_actions:
+for A in gen_actions_O_h:
     f.write(A + ":\n")
     f.write(str(pi110.hom[A]) + "\n")
 
@@ -118,7 +61,7 @@ for irrep,spaces in subspaces_LC_labelled.items():
             difference_vec_of_eps.add(spaces[i][1].negative())
             difference_vec_of_eps.set_label("(eps1 - eps2)")
             add_candidates = [difference_vec_of_eps]
-        trafos = t.test_trafo_behavior(spaces[i],gen_actions,add_outcome_candidates=add_candidates)
+        trafos = t.test_trafo_behavior(spaces[i],gen_actions_O_h,add_outcome_candidates=add_candidates)
         f.write("Transformations:\n")
         f.write(str(trafos))
         f.write("\n")
@@ -128,7 +71,7 @@ for irrep,spaces in subspaces_LC_labelled.items():
     f.write("\n")
 
 ## create files for operators in gpt convention ##
-master_filepath = "D:/Master/Masterarbeit/tests/gpt_folder_structure/"
+master_filepath = filepath + "files_operators_gpt/"
 irrep_folder_prefix = "I1_"
 operator_name = "2pi.g5.0.1.1"
 # to be put together for a total filepath of: master_filepath/irrep_folder_prefix + <irrep_name> + /<int as basis vector enumerator>/operator_name

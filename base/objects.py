@@ -1,6 +1,6 @@
 import numpy as np
 import numbers
-import groups as g
+from base import groups as g
 # Structure:
 # -every class should have: copy(),update(),printname(),is_equal_to(x), is_negative_of(x),action(),inverse_action()
 # -action and inverse_action should require minimal group theoretical/group specific information
@@ -110,15 +110,36 @@ class Vector:
         self.update()
     def __len__(self):
         return 3
-    def __lt__(self,obj):               # ONLY use for sorting, not actual comparisons
-        if self.x < obj.x and not abs(self.x - obj.x) < num_tol:
-            return True
-        elif abs(self.x - obj.x) < num_tol:
-            if self.y < obj.y:
-                return True 
-            elif abs(self.y - obj.y) < num_tol and self.z < obj.z:
-                return True 
-        return False
+    def __lt__(self,obj):               # ONLY use for sorting
+        if all([isinstance(self.x,numbers.Number),isinstance(self.y,numbers.Number),isinstance(self.z,numbers.Number),\
+                isinstance(obj.x,numbers.Number),isinstance(obj.y,numbers.Number),isinstance(obj.z,numbers.Number)]):
+            if self.x < obj.x and not abs(self.x - obj.x) < num_tol:
+                return True
+            elif abs(self.x - obj.x) < num_tol:
+                if self.y < obj.y:
+                    return True 
+                elif abs(self.y - obj.y) < num_tol and self.z < obj.z:
+                    return True 
+            return False
+        else:                       # symbolic maths
+            if str(self.x)[0] < str(obj.x)[0]:
+                return True
+            elif str(self.x)[0] == str(obj.x)[0]:
+                if str(self.x)[0]== '-':
+                    return str(self.x)[1]> str(obj.x)[1]
+                else:
+                    if str(self.y)[0] < str(obj.y)[0]:
+                        return True
+                    elif str(self.y)[0] == str(obj.y)[0]:
+                        if str(self.y)[0] == '-':
+                            return str(self.y)[1] > str(obj.y)[1] 
+                        else: 
+                            if str(self.z)[0] < str(obj.z)[0]:
+                                return True
+                            elif str(self.z)[0] == str(obj.z)[0]:
+                                if str(self.z)[0] == '-':
+                                    return str(self.z)[1] > str(obj.z)[1]           
+            return False
     def copy(self):
         x = self.x
         y = self.y
@@ -131,7 +152,7 @@ class Vector:
         self.update()
         print(self.name)
     def is_equal_to(self,v):                                    
-        if all([self.x == v.x,self.y == v.y, self.z == v.z]):
+        if all([self.x == v.x,self.y == v.y, self.z == v.z]):                   # for symbolic maths
             return True
         if all([isinstance(self.x,numbers.Number),isinstance(self.y,numbers.Number),isinstance(self.z,numbers.Number),\
                 isinstance(v.x,numbers.Number),isinstance(v.y,numbers.Number),isinstance(v.z,numbers.Number)]):
@@ -415,7 +436,7 @@ def vector_sum(vecs):                       # input: list of Vector objects. Out
         y_tot += v.y
         z_tot += v.z
     return Vector([x_tot,y_tot,z_tot])
-class L_Spinor:                                     #\psi_L (see P/S section 3.2) as two-component, C-valued object
+class WeylSpinor:                                     #\psi_L (see P/S section 3.2) as two-component, C-valued object
                                                     # note from Wettig GT, ch. 7.3: Dirac spinor \psi = (\psi_L,\psi_R) transforms in (0,1/2)_x_(1/2,0): irrep iff parity is included
                                                     # therefore: the usefulness of this class might vary 
     def __init__(self,a,b):
@@ -426,14 +447,15 @@ class L_Spinor:                                     #\psi_L (see P/S section 3.2
     def copy(self):
         c = self.a
         d = self.b
-        new_s = L_Spinor(c,d)
+        new_s = WeylSpinor(c,d)
+        # print("copy result: ",type(new_s))
         return new_s
     def update(self):
-        self.name = "L_Spinor{" + str(self.a) + "," + str(self.b) + "}"  
+        self.name = "WeylSpinor{" + str(self.a) + "," + str(self.b) + "}"  
     def printname(self):
         self.update()
         print(self.name)    
-    def gen_action(self,A):             # implement parity when known how to
+    def gen_action(self,A):             
         if A == "A0":
             temp = self.copy()
             self.a = (1/np.sqrt(2))*(temp.a - 1j*temp.b)
@@ -446,6 +468,43 @@ class L_Spinor:                                     #\psi_L (see P/S section 3.2
             temp = self.copy()
             self.a = (1/np.sqrt(2))*(1-1j)*temp.a
             self.b = (1/np.sqrt(2))*(1+1j)*temp.b
+        if A == "Rot0":
+            temp = self.copy()
+            self.a = np.sqrt(2)/2*(temp.a+temp.b*1j)
+            self.b = np.sqrt(2)/2*(temp.a*1j+temp.b)
+        if A == "Rot1":
+            temp = self.copy()
+            self.a = np.sqrt(2)/2*(temp.a+temp.b)
+            self.b = np.sqrt(2)/2*(-temp.a+temp.b)
+        if A == "Rot2":
+            temp = self.copy()
+            self.a = np.sqrt(2)/2*(temp.a*(1+1j))
+            self.b = np.sqrt(2)/2*(temp.b*(1-1j))
+    # def gen_action(self,A):             
+    #     if A == "A0":
+    #         temp = self.copy()
+    #         self.a = (1/np.sqrt(2))*(temp.a - 1j*temp.b)
+    #         self.b = (1/np.sqrt(2))*(-1j*temp.a + temp.b)
+    #     if A == "A1":
+    #         temp = self.copy()
+    #         self.a = (1/np.sqrt(2))*(temp.a - temp.b)
+    #         self.b = (1/np.sqrt(2))*(temp.a + temp.b)
+    #     if A == "A2":
+    #         temp = self.copy()
+    #         self.a = (1/np.sqrt(2))*(1-1j)*temp.a
+    #         self.b = (1/np.sqrt(2))*(1+1j)*temp.b
+    #     if A == "Rot0":
+    #         temp = self.copy()
+    #         self.a = np.sqrt(2)/2*(temp.a-temp.b*1j)
+    #         self.b = np.sqrt(2)/2*(-temp.a*1j+temp.b)
+    #     if A == "Rot1":
+    #         temp = self.copy()
+    #         self.a = np.sqrt(2)/2*(temp.a-temp.b)
+    #         self.b = np.sqrt(2)/2*(temp.a+temp.b)
+    #     if A == "Rot2":
+    #         temp = self.copy()
+    #         self.a = np.sqrt(2)/2*(temp.a*(1-1j))
+    #         self.b = np.sqrt(2)/2*(temp.b*(1+1j))
     def action(self,A):
         As = g.split(A)
         for i in range(len(As)):
@@ -459,10 +518,47 @@ class L_Spinor:                                     #\psi_L (see P/S section 3.2
             temp = self.copy()
             self.a = (1/np.sqrt(2))*(temp.a + temp.b)
             self.b = (1/np.sqrt(2))*(-temp.a + temp.b)
-        if A == "A1":
+        if A == "A2":
             temp = self.copy()
             self.a = (1/np.sqrt(2))*(1+1j)*temp.a
             self.b = (1/np.sqrt(2))*(1-1j)*temp.b
+        if A == "Rot0":
+            temp = self.copy()
+            self.a = np.sqrt(2)/4*(temp.a-temp.b*1j)
+            self.b = np.sqrt(2)/4*(-temp.a*1j+temp.b)
+        if A == "Rot1":
+            temp = self.copy()
+            self.a = np.sqrt(2)/4*(temp.a-temp.b)
+            self.b = np.sqrt(2)/4*(temp.a+temp.b)
+        if A == "Rot2":
+            temp = self.copy()
+            self.a = np.sqrt(2)/4*(temp.a*(1-1j))
+            self.b = np.sqrt(2)/4*(temp.b*(1+1j))
+    # def inverse_gen_action(self,A):
+    #     if A == "A0":
+    #         temp = self.copy()
+    #         self.a = (1/np.sqrt(2))*(temp.a + 1j*temp.b)
+    #         self.b = (1/np.sqrt(2))*(1j*temp.a + temp.b)
+    #     if A == "A1":
+    #         temp = self.copy()
+    #         self.a = (1/np.sqrt(2))*(temp.a + temp.b)
+    #         self.b = (1/np.sqrt(2))*(-temp.a + temp.b)
+    #     if A == "A2":
+    #         temp = self.copy()
+    #         self.a = (1/np.sqrt(2))*(1+1j)*temp.a
+    #         self.b = (1/np.sqrt(2))*(1-1j)*temp.b
+    #     if A == "Rot0":
+    #         temp = self.copy()
+    #         self.a = np.sqrt(2)/4*(temp.a+temp.b*1j)
+    #         self.b = np.sqrt(2)/4*(temp.a*1j+temp.b)
+    #     if A == "Rot1":
+    #         temp = self.copy()
+    #         self.a = np.sqrt(2)/4*(temp.a+temp.b)
+    #         self.b = np.sqrt(2)/4*(-temp.a+temp.b)
+    #     if A == "Rot2":
+    #         temp = self.copy()
+    #         self.a = np.sqrt(2)/4*(temp.a*(1+1j))
+    #         self.b = np.sqrt(2)/4*(temp.b*(1-1j))
     def inverse_action(self,A):
         As = g.split(A)[::-1]               # the slicing reverses list as (AB)^-1 = B^-1 A^-1 
         for i in range(len(As)):
@@ -471,7 +567,7 @@ class L_Spinor:                                     #\psi_L (see P/S section 3.2
         return (abs(self.a-s.a)< num_tol and abs(self.b-s.b) < num_tol)
     def is_negative_of(self,s):
         return (abs(self.a+s.a)< num_tol and abs(self.b+s.b) < num_tol)
-    def lin_factor(self,s2):                 #WRONG?? returns scalar factor k such that self*k = s2; if not linearly dependent in that way, return None
+    def lin_factor(self,s2):                 #returns scalar factor k such that self*k = s2; if not linearly dependent in that way, return None
         if self.is_equal_to(s2):
             return 1
         if not abs(self.a) < num_tol:       # case self.a != 0
@@ -480,11 +576,178 @@ class L_Spinor:                                     #\psi_L (see P/S section 3.2
             k = s2.b/self.b       
         else:                               #case self == (0,0) and they aren´t equal
             return None                                                   
-        scaled_s = L_Spinor(k*self.a,k*self.b)
+        scaled_s = WeylSpinor(k*self.a,k*self.b)
         if scaled_s.is_equal_to(s2):
             return k
-        return None        
-
+        return None  
+    def projection(self,s2):                # projection of self-contribution in s2 via scalar product
+        return np.conj(self.a)*s2.a+np.conj(self.b)*s2.b     
+class DiracSpinor:                                     # four-component, C-valued object. 
+                                                       # Transformation action in chiral representation: block-diagonal for rotations, mixing under parity
+                                                       # Generators of trafo from Euclidian gammas, see GPT
+                                                       # REWRITE: create from two Weyl-spinors; only add specific parity action
+    def __init__(self,a,b,c,d):
+        self.direction_action = "left"
+        self.a = complex(a)
+        self.b = complex(b)
+        self.c = complex(c)
+        self.d = complex(d)
+        self.update()
+    def copy(self):
+        e = self.a
+        f = self.b
+        g = self.c
+        h = self.d
+        new_s = DiracSpinor(e,f,g,h)
+        return new_s
+    def update(self):
+        self.name = "DiracSpinor{" + str(self.a) + "," + str(self.b) + str(self.c) + "," + str(self.d) + "}"  
+    def printname(self):
+        self.update()
+        print(self.name)    
+    def gen_action(self,A):             
+        # if A == "A0":
+        #     temp = self.copy()
+        #     self.a = (1/np.sqrt(2))*(temp.a - 1j*temp.b)
+        #     self.b = (1/np.sqrt(2))*(-1j*temp.a + temp.b)
+        # if A == "A1":
+        #     temp = self.copy()
+        #     self.a = (1/np.sqrt(2))*(temp.a - temp.b)
+        #     self.b = (1/np.sqrt(2))*(temp.a + temp.b)
+        # if A == "A1":
+        #     temp = self.copy()
+        #     self.a = (1/np.sqrt(2))*(1-1j)*temp.a
+        #     self.b = (1/np.sqrt(2))*(1+1j)*temp.b
+        if A == "Rot0":
+            temp = self.copy()
+            self.a = np.sqrt(2)/2*(temp.a+temp.b*1j)
+            self.b = np.sqrt(2)/2*(temp.a*1j+temp.b)
+            self.c = np.sqrt(2)/2*(temp.c+temp.d*1j)
+            self.d = np.sqrt(2)/2*(temp.c*1j+temp.d)
+        if A == "Rot1":
+            temp = self.copy()
+            self.a = np.sqrt(2)/2*(temp.a+temp.b)
+            self.b = np.sqrt(2)/2*(-temp.a+temp.b)
+            self.c = np.sqrt(2)/2*(temp.c+temp.d)
+            self.d = np.sqrt(2)/2*(-temp.c+temp.d)
+        if A == "Rot2":
+            temp = self.copy()
+            self.a = np.sqrt(2)/2*(temp.a*(1+1j))
+            self.b = np.sqrt(2)/2*(temp.b*(1-1j))
+            self.c = np.sqrt(2)/2*(temp.c*(1+1j))
+            self.d = np.sqrt(2)/2*(temp.d*(1-1j))
+    # def gen_action(self,A):             
+    #     if A == "A0":
+    #         temp = self.copy()
+    #         self.a = (1/np.sqrt(2))*(temp.a - 1j*temp.b)
+    #         self.b = (1/np.sqrt(2))*(-1j*temp.a + temp.b)
+    #     if A == "A1":
+    #         temp = self.copy()
+    #         self.a = (1/np.sqrt(2))*(temp.a - temp.b)
+    #         self.b = (1/np.sqrt(2))*(temp.a + temp.b)
+    #     if A == "A2":
+    #         temp = self.copy()
+    #         self.a = (1/np.sqrt(2))*(1-1j)*temp.a
+    #         self.b = (1/np.sqrt(2))*(1+1j)*temp.b
+    #     if A == "Rot0":
+    #         temp = self.copy()
+    #         self.a = np.sqrt(2)/2*(temp.a-temp.b*1j)
+    #         self.b = np.sqrt(2)/2*(-temp.a*1j+temp.b)
+    #     if A == "Rot1":
+    #         temp = self.copy()
+    #         self.a = np.sqrt(2)/2*(temp.a-temp.b)
+    #         self.b = np.sqrt(2)/2*(temp.a+temp.b)
+    #     if A == "Rot2":
+    #         temp = self.copy()
+    #         self.a = np.sqrt(2)/2*(temp.a*(1-1j))
+    #         self.b = np.sqrt(2)/2*(temp.b*(1+1j))
+    def action(self,A):
+        As = g.split(A)
+        for i in range(len(As)):
+            self.gen_action(As[i]) 
+    def inverse_gen_action(self,A):
+        # if A == "A0":
+        #     temp = self.copy()
+        #     self.a = (1/np.sqrt(2))*(temp.a + 1j*temp.b)
+        #     self.b = (1/np.sqrt(2))*(1j*temp.a + temp.b)
+        #     self.c = (1/np.sqrt(2))*(temp.c + 1j*temp.d)
+        #     self.d = (1/np.sqrt(2))*(1j*temp.c + temp.d)
+        # if A == "A1":
+        #     temp = self.copy()
+        #     self.a = (1/np.sqrt(2))*(temp.a + temp.b)
+        #     self.b = (1/np.sqrt(2))*(-temp.a + temp.b)
+        #     self.c = (1/np.sqrt(2))*(temp.c + temp.d)
+        #     self.d = (1/np.sqrt(2))*(-temp.c + temp.d)
+        # if A == "A2":
+        #     temp = self.copy()
+        #     self.a = (1/np.sqrt(2))*(1+1j)*temp.a
+        #     self.b = (1/np.sqrt(2))*(1-1j)*temp.b
+        if A == "Rot0":
+            temp = self.copy()
+            self.a = np.sqrt(2)/4*(temp.a-temp.b*1j)
+            self.b = np.sqrt(2)/4*(-temp.a*1j+temp.b)
+            self.c = np.sqrt(2)/4*(temp.c-temp.d*1j)
+            self.d = np.sqrt(2)/4*(-temp.c*1j+temp.d)
+        if A == "Rot1":
+            temp = self.copy()
+            self.a = np.sqrt(2)/4*(temp.a-temp.b)
+            self.b = np.sqrt(2)/4*(temp.a+temp.b)
+            self.c = np.sqrt(2)/4*(temp.c-temp.d)
+            self.d = np.sqrt(2)/4*(temp.c+temp.d)
+        if A == "Rot2":
+            temp = self.copy()
+            self.a = np.sqrt(2)/4*(temp.a*(1-1j))
+            self.b = np.sqrt(2)/4*(temp.b*(1+1j))
+            self.c = np.sqrt(2)/4*(temp.c*(1-1j))
+            self.d = np.sqrt(2)/4*(temp.d*(1+1j))
+    # def inverse_gen_action(self,A):
+    #     if A == "A0":
+    #         temp = self.copy()
+    #         self.a = (1/np.sqrt(2))*(temp.a + 1j*temp.b)
+    #         self.b = (1/np.sqrt(2))*(1j*temp.a + temp.b)
+    #     if A == "A1":
+    #         temp = self.copy()
+    #         self.a = (1/np.sqrt(2))*(temp.a + temp.b)
+    #         self.b = (1/np.sqrt(2))*(-temp.a + temp.b)
+    #     if A == "A2":
+    #         temp = self.copy()
+    #         self.a = (1/np.sqrt(2))*(1+1j)*temp.a
+    #         self.b = (1/np.sqrt(2))*(1-1j)*temp.b
+    #     if A == "Rot0":
+    #         temp = self.copy()
+    #         self.a = np.sqrt(2)/4*(temp.a+temp.b*1j)
+    #         self.b = np.sqrt(2)/4*(temp.a*1j+temp.b)
+    #     if A == "Rot1":
+    #         temp = self.copy()
+    #         self.a = np.sqrt(2)/4*(temp.a+temp.b)
+    #         self.b = np.sqrt(2)/4*(-temp.a+temp.b)
+    #     if A == "Rot2":
+    #         temp = self.copy()
+    #         self.a = np.sqrt(2)/4*(temp.a*(1+1j))
+    #         self.b = np.sqrt(2)/4*(temp.b*(1-1j))
+    def inverse_action(self,A):
+        As = g.split(A)[::-1]               # the slicing reverses list as (AB)^-1 = B^-1 A^-1 
+        for i in range(len(As)):
+            self.inverse_gen_action(As[i])
+    def is_equal_to(self,s):
+        return (abs(self.a-s.a)< num_tol and abs(self.b-s.b) < num_tol)
+    def is_negative_of(self,s):
+        return (abs(self.a+s.a)< num_tol and abs(self.b+s.b) < num_tol)
+    def lin_factor(self,s2):                 #returns scalar factor k such that self*k = s2; if not linearly dependent in that way, return None
+        if self.is_equal_to(s2):
+            return 1
+        if not abs(self.a) < num_tol:       # case self.a != 0
+            k =  s2.a/self.a
+        elif not abs(self.b) < num_tol:     #case self.b != 0
+            k = s2.b/self.b       
+        else:                               #case self == (0,0) and they aren´t equal
+            return None                                                   
+        scaled_s = WeylSpinor(k*self.a,k*self.b)
+        if scaled_s.is_equal_to(s2):
+            return k
+        return None  
+    def projection(self,s2):                # projection of self-contribution in s2 via scalar product
+        return np.conj(self.a)*s2.a+np.conj(self.b)*s2.b     
 def overall_sign(obj_list):                 # compute overall sign from all occurring Scalar or Pseudoscalars (or other) signs and return as Scalar or PseudoScalar object
     S = 1
     num_PS = 0
@@ -506,10 +769,10 @@ def overall_sign(obj_list):                 # compute overall sign from all occu
     return Scalar(S)
 
 class ScalarField:
-    def __init__(self,momentum,struc = None,explicit_momentum_trafo = False):
+    def __init__(self,momentum,struc = None,modified_momentum_trafo = False):
         self.direction_action = "right"
-        self.explicit_momentum_trafo = explicit_momentum_trafo
-        if self.explicit_momentum_trafo:
+        self.modified_momentum_trafo = modified_momentum_trafo
+        if self.modified_momentum_trafo:
             self.direction_action = "left"
         self.lorentz_structure = "scalar"
         if isinstance(momentum,Vector):
@@ -529,13 +792,13 @@ class ScalarField:
         return self.momentum < obj.momentum
     def copy(self):
         mom = self.momentum.copy()  
-        explicit_mom_trafo = (self.explicit_momentum_trafo == True)      
-        new = ScalarField(mom,explicit_momentum_trafo = explicit_mom_trafo)
+        modified_mom_trafo = (self.modified_momentum_trafo == True)      
+        new = ScalarField(mom,modified_momentum_trafo = modified_mom_trafo)
         return new
     def update(self):
         self.structure.update()
         self.momentum.update()
-        self.name = "ScalarField{" + self.structure.name[8:-1] + "}(p=" + self.momentum.name[4:]
+        self.name = "ScalarField{" + self.structure.name[8:-1] + "}(p=" + self.momentum.name[3:] + ")"
     def printname(self):
         self.update()
         print(self.name)
@@ -544,21 +807,21 @@ class ScalarField:
     def is_negative_of(self,R):
         return False                    # impossible by construction 
     def action(self,A):
-        if not self.explicit_momentum_trafo:
+        if not self.modified_momentum_trafo:
             self.momentum.inverse_action(A)
         else:
             self.momentum.action(A)
         self.update()
     def inverse_action(self,A):
-        if not self.explicit_momentum_trafo:
+        if not self.modified_momentum_trafo:
             self.momentum.action(A)
         else:
             self.momentum.inverse_action(A)
         self.update()
 class PseudoScalarField:                               # particle with: Lorentz pseudoscalar structure (under rotations), momentum
-    def __init__(self,momentum,struc = None, explicit_momentum_trafo = False):
-        self.explicit_momentum_trafo = explicit_momentum_trafo                  # parameter. If False: \psi(p)->det(R)\psi(R^-1 p), if True: \psi(p)->det(R)\psi(Rp) under action R
-        if self.explicit_momentum_trafo: 
+    def __init__(self,momentum,struc = None, modified_momentum_trafo = False):
+        self.modified_momentum_trafo = modified_momentum_trafo                  # parameter. If False: \psi(p)->det(R)\psi(R^-1 p), if True: \psi(p)->det(R)\psi(Rp) under action R
+        if self.modified_momentum_trafo: 
             self.direction_action = "left"
         else:
             self.direction_action = "right"
@@ -607,15 +870,15 @@ class PseudoScalarField:                               # particle with: Lorentz 
     def copy(self):
         mom = self.momentum.copy()
         struc = self.structure.copy()
-        explicit_mom_trafo = (self.explicit_momentum_trafo == True)
-        new = PseudoScalarField(mom,struc,explicit_momentum_trafo = explicit_mom_trafo)
+        modified_mom_trafo = (self.modified_momentum_trafo == True)
+        new = PseudoScalarField(mom,struc,modified_momentum_trafo = modified_mom_trafo)
         if hasattr(self, "name_gpt"):
             new.set_name_gpt("" + self.name_gpt)
         return new
     def update(self):
         self.structure.update()
         self.momentum.update()
-        self.name = "PseudoScalarField{" + self.structure.name[8:-1] + "}(p=" + self.momentum.name[4:]
+        self.name = "PseudoScalarField{" + self.structure.name[8:-1] + "}(p=" + self.momentum.name[3:] + ")"
         if hasattr(self,"name_gpt"):
             self.update_name_gpt()
     def printname(self):
@@ -627,21 +890,21 @@ class PseudoScalarField:                               # particle with: Lorentz 
         return self.structure.is_negative_of(R.structure) and self.momentum.is_equal_to(R.momentum)
     def action(self,A):
         self.structure.action(A)
-        if not self.explicit_momentum_trafo:
+        if not self.modified_momentum_trafo:
             self.momentum.inverse_action(A)
         else:
             self.momentum.action(A)
         self.update()
     def inverse_action(self,A):
         self.structure.inverse_action(A)
-        if not self.explicit_momentum_trafo:
+        if not self.modified_momentum_trafo:
             self.momentum.action(A)
         else:
             self.momentum.inverse_action(A)
         self.update()
 
 class VectorField:                               # particle with: inner vector structure (under rotations), momentum
-    def __init__(self,momentum,struc = None, explicit_momentum_trafo = False):        
+    def __init__(self,momentum,struc = None, modified_momentum_trafo = False):        
         if isinstance(momentum,Vector):
             self.momentum = momentum
         else:
@@ -659,8 +922,8 @@ class VectorField:                               # particle with: inner vector s
             self.direction_action = "left"
         else: 
             self.direction_action = "mixed"
-        self.explicit_momentum_trafo = explicit_momentum_trafo
-        if self.explicit_momentum_trafo:             # parameter. If False: V(p)->RV(R^-1 p), if True: \psi(p)->RV(Rp) under action R
+        self.modified_momentum_trafo = modified_momentum_trafo
+        if self.modified_momentum_trafo:             # parameter. If False: V(p)->RV(R^-1 p), if True: \psi(p)->RV(Rp) under action R
             self.direction_action = "left"
         self.lorentz_structure = "vector"
         self.update()
@@ -698,15 +961,15 @@ class VectorField:                               # particle with: inner vector s
     def copy(self):
         mom = self.momentum.copy()
         struc = self.structure.copy()
-        explicit_mom_trafo = (self.explicit_momentum_trafo == True)
-        new = VectorField(mom,struc,explicit_momentum_trafo=explicit_mom_trafo)
+        modified_mom_trafo = (self.modified_momentum_trafo == True)
+        new = VectorField(mom,struc,modified_momentum_trafo=modified_mom_trafo)
         if hasattr(self,"name_gpt"):
             new.set_name_gpt(""+self.name_gpt)
         return new
     def update(self):
         self.structure.update()
         self.momentum.update()
-        self.name = "VectorField{" + self.structure.name[3:] + "}(p=" + self.momentum.name[4:]
+        self.name = "VectorField{" + self.structure.name[3:] + "}(p=" + self.momentum.name[3:] + ")"
         if hasattr(self,"name_gpt"):
             self.update_name_gpt()
     def printname(self):
@@ -718,14 +981,14 @@ class VectorField:                               # particle with: inner vector s
         return self.structure.is_negative_of(R.structure) and self.momentum.is_equal_to(R.momentum)
     def action(self,A):
         self.structure.action(A)
-        if not self.explicit_momentum_trafo:
+        if not self.modified_momentum_trafo:
             self.momentum.inverse_action(A)
         else:
             self.momentum.action(A)
         self.update()
     def inverse_action(self,A):
         self.structure.inverse_action(A)
-        if not self.explicit_momentum_trafo:
+        if not self.modified_momentum_trafo:
             self.momentum.action(A)
         else:
             self.momentum.inverse_action(A)
@@ -745,7 +1008,7 @@ class VectorField:                               # particle with: inner vector s
         if abs(self.structure.z) > 0:
             return 2
 class PseudoVectorField:                               # particle with: Lorentz pseudovector structure (under rotations), momentum
-    def __init__(self,momentum,struc = None,explicit_momentum_trafo = False):
+    def __init__(self,momentum,struc = None,modified_momentum_trafo = False):
         self.lorentz_structure = "pseudovector"
         if isinstance(momentum,Vector):
             self.momentum = momentum
@@ -764,8 +1027,8 @@ class PseudoVectorField:                               # particle with: Lorentz 
             self.direction_action = "left"
         else: 
             self.direction_action = "mixed"
-        self.explicit_momentum_trafo = explicit_momentum_trafo
-        if self.explicit_momentum_trafo:             # parameter. If False: V(p)->RV(R^-1 p), if True: \psi(p)->RV(Rp) under action R
+        self.modified_momentum_trafo = modified_momentum_trafo
+        if self.modified_momentum_trafo:             # parameter. If False: V(p)->RV(R^-1 p), if True: \psi(p)->RV(Rp) under action R
             self.direction_action = "left"
         self.update()
     def __lt__(self,obj):
@@ -778,13 +1041,13 @@ class PseudoVectorField:                               # particle with: Lorentz 
     def copy(self):
         mom = self.momentum.copy()
         struc = self.structure.copy()
-        explicit_mom_trafo = (self.explicit_momentum_trafo == True)
-        new = PseudoVectorField(mom,struc,explicit_momentum_trafo=explicit_mom_trafo)
+        modified_mom_trafo = (self.modified_momentum_trafo == True)
+        new = PseudoVectorField(mom,struc,modified_momentum_trafo=modified_mom_trafo)
         return new
     def update(self):
         self.structure.update()
         self.momentum.update()
-        self.name = "PseudoVectorField{" + self.structure.name[4:] + "}(p=" + self.momentum.name[4:]
+        self.name = "PseudoVectorField{" + self.structure.name[4:] + "}(p=" + self.momentum.name[3:] + ")"
     def printname(self):
         self.update()
         print(self.name)
@@ -794,14 +1057,14 @@ class PseudoVectorField:                               # particle with: Lorentz 
         return self.structure.is_negative_of(R.structure) and self.momentum.is_equal_to(R.momentum)
     def action(self,A):
         self.structure.action(A)
-        if not self.explicit_momentum_trafo:
+        if not self.modified_momentum_trafo:
             self.momentum.inverse_action(A)
         else:
             self.momentum.action(A)
         self.update()
     def inverse_action(self,A):
         self.structure.inverse_action(A)
-        if not self.explicit_momentum_trafo:
+        if not self.modified_momentum_trafo:
             self.momentum.action(A)
         else:
             self.momentum.inverse_action(A)
@@ -821,7 +1084,7 @@ class PseudoVectorField:                               # particle with: Lorentz 
         if abs(self.structure.z) > 0:
             return 2
 class TensorField:                      # Field operator(with momentum) that transforms like the spacial components of a rank-2 Lorentz-tensor T: T^{mu,nu} -> Lambda^{rho}_mu Lambda^{sigma}_nu T^{rho,sigma} 
-                                        # not yet used for anything. Lacks other fields' functionalities: direction_action,explicit_momentum_trafo
+                                        # not yet used for anything. Lacks other fields' functionalities: direction_action,modified_momentum_trafo
     def __init__(self,momentum,structure = None,sign = 1,symmetric = False,antisymmetric = False):
             self.lorentz_structure = "tensor"
             if isinstance(momentum,Vector):
@@ -924,20 +1187,20 @@ class LinearCombination:
         self.update()
         print(self.name)
     def lin_factor(self,lc2):                 #returns scalar factor k=s/r such that k*self = lc2; if not linearly dependent in that way, return None
-        r = []
+        R = []
         s = []
         n_0 = 0                                 #counter of how many wheights are zero
         k = []
         for i in range(len(self.lin_comb)):
-            r.append(self.lin_comb[i].obj[0].num)
+            R.append(self.lin_comb[i].obj[0].num)
             s.append(lc2.lin_comb[i].obj[0].num)
-            if abs(r[i]) < num_tol:
+            if abs(R[i]) < num_tol:
                 if abs(s[i]) < num_tol:
                     n_0 += 1
                 else:
                     return None
             else: 
-                k.append(s[i]/r[i])
+                k.append(s[i]/R[i])
         if n_0 == len(self.lin_comb):
             print("LC.lin:factor: all wheights zero for both objects")#
             return 1
@@ -1118,9 +1381,11 @@ class TensorProduct:                            # tensor product of arbitrary nu
         for o1 in objects1.copy():
             o2 = match_in_list(o1,objects2)
             if o2 == None:                      # failure to find exact match: Look for "antiparallel" pair
-                neg_o1 = invert(o1.copy())
-                o2 = match_in_list(neg_o1,objects2)
+                # neg_o1 = invert(o1.copy())
+                # print("neg_o1:" + neg_o1.name)
+                o2 = negative_match_in_list(o1,objects2)
                 if o2 == None:
+                    # print("pair_up:failure. return None")
                     return None                 # failure to pair up at all: Return None
                 else: 
                     n_sign_diff += 1
@@ -1145,8 +1410,14 @@ def minus(n):                       # multiplies by (-1) or modifies a String ac
         return n[1:]
     return '-' + n
 def invert(object):
-    obj = object.copy()                    
-    if hasattr(obj,"lorentz_structure"):                # <..>Field classes
+    obj = object.copy()    
+    if isinstance(obj,TensorProduct):
+        print("tensorproduct. loop and invert components")
+        for i in range(len(obj.obj)):
+            print(i)
+            obj.obj[i] = invert(obj.obj[i])
+        return obj
+    elif hasattr(obj,"lorentz_structure"):                # <..>Field classes
         if "vector" in obj.lorentz_structure:           # Vector and PseudoVector                
             obj.structure = invert(obj.structure.copy)               
         elif "scalar" in obj.lorentz_structure:         # Scalar and PseudoScalar
@@ -1162,6 +1433,7 @@ def invert(object):
             obj.y = minus(obj.y)
             obj.z = minus(obj.z)
             return obj
+    
         # extend for different structures
 
 def negative_pair(m,n):                 #returns True if m = -n up to some precision
@@ -1191,14 +1463,20 @@ def coord_to_num(s):                # used for sorting in Rho __lt__: String s c
         return None
     return n
 def match_in_list(x,l_y, index = False):                    # returns None if x is not equal up to numerical error to any value in l_y, otherwhise returns first match
+    # print("match_in_list: x: " + x.name)
     if hasattr(x, "is_equal_to"):
         for y in l_y:
+            # print("y:",y.name)
             if x.is_equal_to(y):
                 if index:
                     return l_y.index(y)
                 return y
     else:
         for y in l_y:
+            if x == y:
+                if index: 
+                    return l_y.index(y)
+                return y
             if abs(x-y) < num_tol:
                 if index: 
                     return l_y.index(y)
@@ -1299,13 +1577,40 @@ def extended_orbit(object,group):                   # find all possible combinat
                     o.momentum = m
                     orb.append(o)
             return orb
+## backup ##
+# def find_closure(starting_set, object):       #takes list of Strings starting_set, some object instance, and returns the closure regarding the objects resulting from combinations of actions  
+#     actions = {}
+#     actions["I"] = object.copy()
+#     print("in find_closure:" , actions["I"])
+#     for a in starting_set:
+#         actions[a] = object.copy().action(a)    
+#     known_objects = {"I": object}       
+#     #plan: apply actions to all objects in known objects, if result is new, add to known_objects with name for the group element
+#     n = 0
+#     while n != len(known_objects):                          
+#         n = len(known_objects)
+#         for a in actions.copy().keys():
+#             for key, ob in known_objects.copy().items():  
+#                 new_o = ob.copy()  
+#                 new_o.action(a)            
+#                 New = True
+#                 for x in known_objects.values():
+#                     if new_o.is_equal_to(x):
+#                         New = False
+#                 if New:
+#                     new_name = g.remove_I(a + key)
+#                     known_objects[new_name] = new_o
+#                     actions[new_name] = new_o    
+#     print("in find_closure(end):" , actions["I"])
+#     return actions
 
-def find_closure(gen_actions, object):       #takes list of Strings gen_actions, some object instance, and returns the closure regarding the objects resulting from combinations of actions  
-    actions = {}
-    actions["I"] = object.copy()
-    for a in gen_actions:
+def find_closure(starting_set, object):       #takes list of Strings starting_set, some object instance, and returns dict of the closure regarding the objects resulting from combinations of actions  
+    actions = {}    
+    for a in starting_set:
         actions[a] = object.copy().action(a)    
-    known_objects = {"I": object}       
+    actions["I"] = object.copy()
+    known_objects = {"I": object}  
+    print("in find_closure:" , actions["I"])     
     #plan: apply actions to all objects in known objects, if result is new, add to known_objects with name for the group element
     n = 0
     while n != len(known_objects):                          
@@ -1313,7 +1618,9 @@ def find_closure(gen_actions, object):       #takes list of Strings gen_actions,
         for a in actions.copy().keys():
             for key, ob in known_objects.copy().items():  
                 new_o = ob.copy()  
-                new_o.action(a)            
+                new_o.action(a)    
+                if new_o == None:
+                        print("Error with: " , a,ob.name,type(ob))         
                 New = True
                 for x in known_objects.values():
                     if new_o.is_equal_to(x):
@@ -1321,7 +1628,9 @@ def find_closure(gen_actions, object):       #takes list of Strings gen_actions,
                 if New:
                     new_name = g.remove_I(a + key)
                     known_objects[new_name] = new_o
-                    actions[new_name] = new_o    
+                    actions[new_name] = new_o
+                      
+    print("in find_closure(end):" , actions["I"])
     return actions
 
 def mult_table_from_actions(actions):                             
@@ -1340,10 +1649,18 @@ def mult_table_from_actions(actions):
                     mt[a][b] = c                        # a.b = c because they have the same action            
     return mt
 def generate_group(gen_actions,obj):
+    # print(type(obj))
     actions = find_closure(gen_actions,obj)
+    # print(actions["I"])
     mt = mult_table_from_actions(actions)
+    # print(mt["I"])
     G = g.Group(list(actions.keys()),mt)
     return G
+
+
+# print("test import g:")
+# st = "IRot2"
+# print(g.remove_I(st))
 
 
 

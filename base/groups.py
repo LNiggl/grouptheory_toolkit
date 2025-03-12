@@ -8,8 +8,11 @@ class Group:                            #includes all important things we know a
                                         #NB: save action as dict of dicts: {g:{b_i : b_j,...}, h:...}
 
     def __init__(self,e,m_table):
-        self.elements = e.copy()        
-        self.mult_table = m_table.copy()
+        self.elements = e.copy()  
+        mt = m_table.copy()     
+        self.mult_table = mt  
+        self.find_identity()
+        # print(self.mult_table)     
         self.inverse_list = self.inverses()
         self.classes = self.find_conjugacy_classes()
     
@@ -25,9 +28,14 @@ class Group:                            #includes all important things we know a
         assert Ex == Ey                                                 # I is such that gI=I for any g; evaluate from two g randomly
         if Ex != "I":
             if not any(self.elements == "I"):
+                print("Name of identity: ", str(Ex))
+                print("renamed to I")
                 rename_key(self.elements,Ex,"I") 
             else:
                 print("Name of identity: ", str(Ex))
+                print("Name 'I' already exists")
+        else:
+            print("identity is named 'I'.")
         return Ex
 
     def inverses(self):

@@ -1,6 +1,6 @@
 import numpy as np
-import groups as g
-import objects as o
+from base import groups as g
+from base import objects as o
 import numbers
 class Representation(g.Group):
     # hom = {}                           #dict for homomorphism: G -> GL(n)
@@ -37,7 +37,7 @@ class Representation(g.Group):
                     eps = np.linalg.norm(np.matmul(self.hom[g],self.hom[h]) - self.hom[self.mult_table[g][h]])
                 else:                       # cases with neither right nor left action -> must be combination, which does not form homomorphism                
                     assert False
-                assert eps < 1e-13
+                assert eps < 1e-6
                 
     def is_reducible(self):
         return g.inner_product(self.characters,self.characters,self.group) - 1 > 1e-5
@@ -59,8 +59,8 @@ def matrix_from_action(A,basis,group_homomorphism = None):
         acted_basis.append(x)
     for i in range(d):
         for j in range(d):
-            if hasattr(basis[j],"lin_factor"):
-                k = basis[j].lin_factor(basis[i])
+            if hasattr(basis[j],"projection"):
+                k = basis[j].projection(acted_basis[i])
                 if k == None:
                     M[i][j] = 0
                 else:
@@ -378,18 +378,49 @@ def T1_identify_components(P,Rep):          # P = [proj,mult] -> dict {"x" : v o
     ev_x = list_nonzero_eigvecs(M)            # evecs of Rep(Rot0).P with ev 1 transform like x coordinate 
     for e in list(ev_x.keys()):
         if abs(e-1)< 1e-8:
-            components["x"] = gram_schmidt(*ev_x[e])
-            for i in range(len(components["x"])):
-                # components["x"][i] = rotate_to_real_valued(components["x"][i])
-                components["x"][i] = make_first_entry_pos(components["x"][i])
+            components["x"] = ev_x[e]
+            
+            j = 0
+            while j < len(components["x"]):
+                for i in range(j+1,len(components["x"])):
+                    components["x"][j] = subtract_for_zero_entries(components["x"][j],components["x"][i])     #makes for "nicer" vectors 
+                # print("in T1_identify_components, after subtract_fro_zero_entries: components[x]:")
+                # print(components["x"])
+                components["x"][j] = make_first_entry_unity(components["x"][j])
+                # print("in T1_identify_components, after make_first_entry_unity: components[x]:")
+                # print(components["x"])
+                if j == 0: 
+                    components["x"]= gram_schmidt(*components["x"][j:])                # orthonormalize
+                else:
+                    temp = components["x"][:]
+                    components["x"] = temp[:j]
+                    components["x"]+=gram_schmidt(*temp[j:])
+                
+                # print("in T1_identify_components, after gram_schmidt: components[x]:")
+                # print(components["x"])
+                j += 1
+            # print("in T1_identify_components, after while loop: components[x]:")
+            # print(components["x"])
+            # for i in range(len(components["x"])-1):
+            #     components["x"][0] = subtract_for_zero_entries(components["x"][0],components["x"][i+1])     #makes for "nicer" vectors
+            # components["x"][0] = make_first_entry_unity(components["x"][0])
+            # components["x"] = gram_schmidt(*components["x"])                # orthonormalize
+            # for i in range(len(components["x"])):                
+            #     components["x"][i] = make_first_entry_pos(components["x"][i])       # introduce sign convention for vectors
+            ## backup 
+            # components["x"] = gram_schmidt(*ev_x[e])
+            # for i in range(len(components["x"])):
+            #     # components["x"][i] = rotate_to_real_valued(components["x"][i])
+            #     components["x"][i] = make_first_entry_pos(components["x"][i])
+            ##
     components["y"] = []
     components["z"] = [] 
-    # define such that (x,y,z) form a right system. Depending on direction_action: x->y and y->z done by opposite rotations since f.Rot_i^{right} = Rot_i^{left}^{-1}.f   
+    #defined such that basis (x,y,z) would form a LEFT OR RIGHT HANDED SYSTEM accordingly. To change direction_action==right case to a RIGHT handed system, add transpose to rotation 
     if Rep.direction_action == "right":
         for x in components["x"]:
-            y = np.matmul(Rep.hom["Rot2"].T,x)
+            y = np.matmul(Rep.hom["Rot2"],x)
             components["y"].append(y)
-            components["z"].append(np.matmul(Rep.hom["Rot0"].T,y))
+            components["z"].append(np.matmul(Rep.hom["Rot0"],y))
     elif Rep.direction_action == "left":
         for x in components["x"]:
             y = np.matmul(Rep.hom["Rot2"],x)
@@ -404,54 +435,39 @@ def E_identify_components(P,Rep):          # P = [proj,mult] -> dict {"xx-yy": .
     P_orientation = list_nonzero_eigvecs(np.matmul(Rep.hom["Rot2"],P[0]))               # Eigvec with EV -1 transforms like (x_1,x_2) - (y_1,y_2) in T1m_x_T1m
     for e in list(P_orientation.keys()):
         if abs(e+1)< 1e-8:
-            components["xx-yy"] = gram_schmidt(*P_orientation[e])
-            for i in range(len(components["xx-yy"])):
-                components["xx-yy"][i] = rotate_to_real_valued(components["xx-yy"][i])
-                components["xx-yy"][i] = make_first_entry_pos(components["xx-yy"][i]) 
+            components["xx-yy"] = P_orientation[e]
+            j = 0
+            while j < len(components["xx-yy"]):
+                for i in range(j+1,len(components["xx-yy"])):
+                    components["xx-yy"][j] = subtract_for_zero_entries(components["xx-yy"][j],components["xx-yy"][i])     #makes for "nicer" vectors 
+                components["xx-yy"][j] = make_first_entry_unity(components["xx-yy"][j])
+                # components["xx-yy"] = gram_schmidt(*components["xx-yy"][j:]) 
+                if j == 0: 
+                    components["xx-yy"]= gram_schmidt(*components["xx-yy"][j:])                # orthonormalize
+                else:
+                    temp = components["xx-yy"][:]
+                    components["xx-yy"] = temp[:j]
+                    components["xx-yy"]+=gram_schmidt(*temp[j:])
+                               # orthonormalize
+                j += 1
+            # for i in range(len(components["xx-yy"])):                
+            #     components["xx-yy"][i] = make_first_entry_pos(components["xx-yy"][i])       # introduce sign convention for vector  
+
     components["xx-zz"] = []
     # direction_action no factor here, since this is taken care of in Rep.hom via transposition: there, every right-action problem is transformed in a left-action problem
     for x in components["xx-yy"]:
         components["xx-zz"].append(np.matmul(Rep.hom["Rot0"],x))                # rotate xx-yy to xx-zz
     return components
 
-def T2_identify_components(P,Rep):          # P = [proj,mult] -> dict {"xx-yy": .., "xx-zz": ..} such that same array entries, e.g. dict["x"][0],dict["y"][0],.. form an inv. subspace
-    components = {}
-    # P_t1 = np.matmul(Rep.hom["Rot2"],P[0])
-    # np.save("../results/projectors/"+Rep.name+"_T2m_t1",P_t1)
-    P_orientation = list_nonzero_eigvecs(np.matmul(Rep.hom["Rot2"],P[0]))               # Eigvec with EV -1 transforms like (x_1,x_2) - (y_1,y_2) in T1m_x_T1m
-    for e in list(P_orientation.keys()):
-        if abs(e+1)< 1e-8:
-            components["xy+yx"] = P_orientation[e]
-            for i in range(len(components["xy+yx"])-1):
-                components["xy+yx"][0] = subtract_for_zero_entries(components["xy+yx"][0],components["xy+yx"][i+1])     #makes for "nicer" vectors
-            components["xy+yx"][0] = normalize(components["xy+yx"][0])
-            components["xy+yx"][0] = rotate_to_real_valued(components["xy+yx"][0])
-            components["xy+yx"] = gram_schmidt(*components["xy+yx"])                # orthonormalize
-            for i in range(len(components["xy+yx"])):
-                
-                components["xy+yx"][i] = make_first_entry_pos(components["xy+yx"][i])       # introduce sign convention for vectors
-    components["xz+zx"] = []
-    components["yz+zy"] = [] 
-    if Rep.direction_action == "left":
-        for a in components["xy+yx"]:
-            components["xz+zx"].append(np.matmul(Rep.hom["Rot0"],a))                # rotate xy+yx to xz+zx   
-        for b in components["xz+zx"]:
-            components["yz+zy"].append(np.matmul(Rep.hom["Rot2"],b))                # rotate xz+zx to yz+zy
-    elif Rep.direction_action == "right":
-        for a in components["xy+yx"]:
-            components["xz+zx"].append(np.matmul(Rep.hom["Rot0"].T,a))                # rotate xy+yx to xz+zx   
-        for b in components["xz+zx"]:
-            components["yz+zy"].append(np.matmul(Rep.hom["Rot2"].T,b))                # rotate xz+zx to yz+zy
-    else:
-        print("PROBLEM: in T1_identify_components: neither left nor right action applicable.")
-    return components
-def study_irreps(rep,group,filename):                               # find all irreps(like find_irreps()), then decompose all subspaces and write results to file; 
+def study_irreps(rep,group,filepath):                               # find all irreps(like find_irreps()), then decompose all subspaces and write results to file; 
                                                                     # filename: absolute or relative path, must end in desired format,e.g. ".txt" 
                                                                     # returns {irrep : {basisvector_name : [such vectors]}}
     c_dim = 0
     P_irrep = {}
     Rep = rep.copy("Rep")               # change Rep, leave the input Repr. rep unchanged
+    f = open(filepath, "w")
     print("irreps of ", rep.name , ":")
+    f.write("irreps of "+ rep.name + ":" + "\n")
     for irrep,chars in group.char_table.items():         
         temp = Rep.copy("temp")
         P = projector_irrep(temp,chars)
@@ -466,17 +482,19 @@ def study_irreps(rep,group,filename):                               # find all i
             apply_projector(R,Rep)                 
             if temp.is_reducible():
                 print(irrep, "(reducible inv. subspace)-> occurrence: ", temp.characters["I"] / chars["I"])
+                f.write(irrep + "(reducible inv. subspace)-> occurrence: " + str(temp.characters["I"] / chars["I"]) + "\n")
                 c_dim += temp.characters["I"]
             else:
-                print(irrep, "-> occurrence: 1") 
+                print(irrep, "-> occurrence: 1")
+                f.write(irrep+ "-> occurrence: 1" + "\n") 
                 c_dim += temp.characters["I"]
             P_irrep[irrep] = [P,temp.characters["I"] / chars["I"]]
-    print("sum of dims: ",  c_dim)
-    
+    print("sum of dims: " +  str(c_dim))
+    f.write("sum of dims: " +  str(c_dim))
 
     inv_subspaces = {}
-    f = open(filename, "w")
-    f.write("Basis of " + rep.name + ": \n") 
+    
+    f.write("\n\nBasis of " + rep.name + ": \n") 
     for b in rep.basis:
         f.write(b.name + "\n")
     f.write("Dimension: " + str(len(rep.basis)) + "\n")
@@ -490,7 +508,7 @@ def study_irreps(rep,group,filename):                               # find all i
             inv_subspaces[key] = vecs
             f.write(str(vecs)+"\n")
         if key == "T1m" or key == "T1p":
-            vecs = T1_identify_components(P_n_pair,rep)
+            vecs = T1_identify_components(P_n_pair,rep)    
             if key == "T1m":
                 f.write("T1m subspace:"+"\n")
             else:
@@ -498,7 +516,7 @@ def study_irreps(rep,group,filename):                               # find all i
             inv_subspaces[key] = vecs
             f.write(str(vecs)+"\n")
         if key == "A2m" or key == "A2p":  
-            vecs = A_identify_components(P_n_pair)                 
+            vecs = A_identify_components(P_n_pair)                    
             if key == "A2m":
                 f.write("A2m subspace:"+"\n") 
             else:
@@ -506,7 +524,7 @@ def study_irreps(rep,group,filename):                               # find all i
             inv_subspaces[key] = vecs
             f.write(str(vecs)+"\n")
         if key == "T2m" or key == "T2p":
-            vecs = T2_identify_components(P_n_pair,rep)
+            vecs = T2_identify_components(P_n_pair,rep)    
             if key == "T2m":
                 f.write("T2m subspace:"+"\n")
             else:
@@ -515,6 +533,8 @@ def study_irreps(rep,group,filename):                               # find all i
             f.write(str(vecs)+"\n")
         if key == "Em" or key == "Ep":
             vecs = E_identify_components(P_n_pair,rep)
+            # for i in range(len(vecs)):
+            #     vecs[i] = np.array(vecs[i])   
             if key == "Em":
                 f.write("Em subspace:"+"\n")
             else:
@@ -524,7 +544,45 @@ def study_irreps(rep,group,filename):                               # find all i
     f.close()
     return inv_subspaces
 
-def scalar_prod(x,y):                           #returne (complex or real) scalar product between x and y 
+def T2_identify_components(P,Rep):          # P = [proj,mult] -> dict {"xx-yy": .., "xx-zz": ..} such that same array entries, e.g. dict["x"][0],dict["y"][0],.. form an inv. subspace
+    components = {}
+    P_orientation = list_nonzero_eigvecs(np.matmul(Rep.hom["Rot2"],P[0]))               # Eigvec with EV -1 transforms like (x_1,x_2) - (y_1,y_2) in T1m_x_T1m
+    for e in list(P_orientation.keys()):
+        if abs(e+1)< 1e-8:
+            components["xy+yx"] = P_orientation[e]
+            j = 0
+            while j < len(components["xy+yx"]):
+                for i in range(j+1,len(components["xy+yx"])):
+                    components["xy+yx"][j] = subtract_for_zero_entries(components["xy+yx"][j],components["xy+yx"][i])     #makes for "nicer" vectors 
+                components["xy+yx"][j] = make_first_entry_unity(components["xy+yx"][j])
+                # components["xy+yx"] = gram_schmidt(*components["xy+yx"][j:])                # orthonormalize
+                if j == 0: 
+                    components["xy+yx"]= gram_schmidt(*components["xy+yx"][j:])                # orthonormalize
+                else:
+                    temp = components["xy+yx"][:]
+                    components["xy+yx"] = temp[:j]
+                    components["xy+yx"] +=gram_schmidt(*temp[j:])
+                j += 1
+            # for i in range(len(components["xy+yx"])):                
+            #     components["xy+yx"][i] = make_first_entry_pos(components["xy+yx"][i])       # introduce sign convention for vectors
+    components["xz+zx"] = []
+    components["yz+zy"] = []
+    #defined such that basis (x,y,z) would form a LEFT OR RIGHT HANDED SYSTEM accordingly(see T1_identify_components). To change direction_action==right case to a RIGHT handed system, add transpose to rotation 
+    if Rep.direction_action == "left":
+        for a in components["xy+yx"]:
+            components["xz+zx"].append(np.matmul(Rep.hom["Rot0"],a))                # rotate xy+yx to xz+zx   
+        for b in components["xz+zx"]:
+            components["yz+zy"].append(np.matmul(Rep.hom["Rot2"],b))                # rotate xz+zx to yz+zy
+    elif Rep.direction_action == "right":
+        for a in components["xy+yx"]:
+            components["xz+zx"].append(np.matmul(Rep.hom["Rot0"],a))                # rotate xy+yx to xz+zx   
+        for b in components["xz+zx"]:
+            components["yz+zy"].append(np.matmul(Rep.hom["Rot2"],b))                # rotate xz+zx to yz+zy
+    else:
+        print("PROBLEM: in T1_identify_components: neither left nor right action applicable.")
+    return components
+
+def scalar_prod(x,y):                           #return (complex or real) scalar product between x and y 
     assert len(x) == len(y)
     temp = 0
     for i in range(len(x)):
@@ -552,7 +610,13 @@ def gram_schmidt(*v):                      # returns array of orthonormal vector
         u.append(temp)
         e.append(normalize(temp))
     return e
-
+def round_to_integer(X,tol):                # rounds all elements of square matrix X to integer if within tolerance tol. casts X[i][j] to array in process
+    X = np.array(X)
+    for i in range(len(X)):
+        for j in range(len(X)):
+            if abs(X[i][j]-round(X[i][j]))<tol:
+                X[i][j] = round(X[i][j])
+    return X
 def make_first_entry_pos(v):                # looks for first nonzero entry in v; multiplies v with (-1) if this entry is negative
     assert hasattr(v,"__len__")
     i = 0
@@ -561,25 +625,37 @@ def make_first_entry_pos(v):                # looks for first nonzero entry in v
     if np.real(v[i]) < 0:
         for j in range(len(v)):
             v[j] = (-1)*v[j]
+    return v  
+def make_first_entry_unity(v):                # looks for first nonzero entry in v; divides v this entry
+    # print("in make_first_entry_unity: vec before:")
+    # print(v)
+    assert hasattr(v,"__len__")
+    i = 0
+    while abs(v[i]) < o.num_tol:
+        i += 1
+    norm = 0 + v[i]
+    # print("v[i]:")
+    # print(v[i])
+    for j in range(len(v)):
+        v[j] = v[j]/norm
+    # print("vec after:")
+    # print(v)
     return v    
 def subtract_for_zero_entries(u,v):             #subtracts vector v from u such that u obtains more/most zero entries; returns u
     assert len(u) == len(v)
     new_u = []
-    i = 0
-    while True:
-        if abs(u[i]) > o.num_tol:
-            if abs(v[i]) > o.num_tol:
-                break
-        i += 1
-        if i > len(u)+1:
-            print("In subtract_for_zero_entries: only entries of zero.")
-            i = 0
-            break
-    f = complex(10000000000*u[i]/(100000000000*v[i]))
+    i = find_index_largest_entry(v)
+    f = complex(u[i]/v[i])
     for j in range(len(u)):
         new_u.append([complex(u[j])-f*complex(v[j])])
     new_u = np.matrix(new_u)
     return new_u
+def find_index_largest_entry(v):
+    idx = 0
+    for i in range(len(v)):
+        if abs(v[i]) > abs(v[idx]) and abs(v[i]-v[idx] > o.num_tol):
+            idx = i
+    return idx
 def first_imag_value(v):
     i = 0    
     while i < len(v)-1:
@@ -602,17 +678,7 @@ def rotate_to_real_valued(v):           # takes vector, applies scalar phase e^{
     if f:
         print("WARNING: in rotate_to_real_valued: imaginary part remaining.")
     return v
-# def rotate_to_real_valued(v):
-#     phi = [np.arctan2(np.imag(v[i]),np.real(v[i])) for i in range(len(v))]
-#     print(phi)
-#     for i in range(len(phi)):
-#         if abs(phi[i]-phi[0]) > o.num_tol:
-#             # print(phi[i]-phi[0])
-#             print("FAIL: in rotate_to_real_valued: no scalar phase is appropriate.")
-#             return v
-#     for i in range(len(v)):        
-#         v[i] = v[i]*np.exp(-phi[0]*1j)
-#     return v
+
 
     
 
