@@ -1,11 +1,11 @@
-def compare_strings(file1,file2):                               #returns True if strings are the same
+def compare_strings(file1,file2) -> bool:                               
     print("differences between", file1, " and ", file2 , ":")
     from difflib import Differ
     with open(file1) as f1, open(file2) as f2:
         differ = Differ()
         diff = differ.compare(f1.readlines(),f2.readlines())
-        c = 0               #counts lines   
-        e = -1               #marker for first error
+        c = 0                   #counts lines   
+        e = -1                  #marker for first error
         for line in diff:
             if not line.startswith(" "):
                 # print(line)

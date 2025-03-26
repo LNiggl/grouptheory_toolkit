@@ -1,11 +1,10 @@
-import numpy as np
-from base import groups as g
 from base import objects as o
 from base import representations as r
-from base import testing as t
+from base import tools as t
 from base import O_h,gen_actions_O_h                    # import group list of actions used in generation of O_h
 
-#(1,1,0) - type 2Pion    
+
+#(3,1,1) - type 2Pion    
 filepath = "D:/Master/Masterarbeit/results/twopi/data/"
 name = "twopi311"
 p1 = o.PseudoScalarField([3,1,1],modified_momentum_trafo=True)
@@ -66,7 +65,7 @@ for irrep,spaces in subspaces_LC_labelled.items():
         f.write(str(trafos))
         f.write("\n")
         f.write("Trafo as expected: ")
-        b = t.compare_string_to_file(str(trafos),"D:/Master/Masterarbeit/tests/expected_trafos/" + irrep + "_expected.txt")
+        b = t.compare_string_to_file(str(trafos),"../results/expected_trafos/" + irrep + "_expected.txt")
         f.write(str(b) + "\n")
     f.write("\n")
 

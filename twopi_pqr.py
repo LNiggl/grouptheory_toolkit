@@ -1,11 +1,11 @@
 import numpy as np
-from base import groups as g
+
 from base import objects as o
 from base import representations as r
-from base import testing as t
+from base import tools as t
 from base import O_h,gen_actions_O_h                    # import group list of actions used in generation of O_h
 
-#(1,0,0) - type 2Pion    
+
 filepath = "D:/Master/Masterarbeit/results/twopi/data/"
 name = "twopipqr"
 p1 = o.PseudoScalarField(["p","q","r"],modified_momentum_trafo=True)
@@ -26,9 +26,7 @@ f.write("Test successful.\n")
 
 subspaces = r.study_irreps(pipqr,O_h,filepath + "summary_irreps/" + name + ".txt")
 subspaces_ordered_by_space = t.reorder_subspaces(subspaces)
-t.export_vectors(subspaces_ordered_by_space,filepath + name + "_vecdata", real = True) # D:/Master/Masterarbeit/results/test_01/twopipqr_vecdata", real = True)
-# import sys
-# sys.exit()
+t.export_vectors(subspaces_ordered_by_space,filepath + name + "_vecdata", real = True)                     # export for plotting
 all_disjoint = t.subspaces_disjoint(subspaces_ordered_by_space,pipqr)
 subspaces_LC_labelled = t.label_all(subspaces_ordered_by_space,pipqr)
 
@@ -43,13 +41,8 @@ for i in range(len(pipqr.basis)):
     f.write(str(i+1)+":\n")
     f.write(pipqr.basis[i].name_gpt)
     f.write("\n")
-# f.write("Matrices of rotations and parity:\n")
-# for A in gen_actions_O_h:
-#     f.write(A + ":\n")
-#     f.write(str(pipqr.hom[A]) + "\n")
 
 f.write("\nInvariant irreducible subspaces:\n\n")
-
 for irrep,spaces in subspaces_LC_labelled.items():
     f.write("Irrep " + irrep + ".\n")
     for i in range(len(spaces)):
@@ -69,8 +62,27 @@ for irrep,spaces in subspaces_LC_labelled.items():
         f.write(str(trafos))
         f.write("\n")
         f.write("Trafo as expected: ")
-        b = t.compare_string_to_file(str(trafos),"D:/Master/Masterarbeit/tests/expected_trafos/" + irrep + "_expected.txt")
+        b = t.compare_string_to_file(str(trafos),"../results/expected_trafos/" + irrep + "_expected.txt")
         f.write(str(b) + "\n")
+    f.write("\n")
+
+## all (complex) values are very close to natural square roots (normalization factors). Testing accuracy if these values would be assumed 
+nums = [0,1/np.sqrt(2),1/np.sqrt(4),1/np.sqrt(6),1/np.sqrt(8),1/np.sqrt(12),1/np.sqrt(16),1/np.sqrt(24),1/np.sqrt(32),1/np.sqrt(48),1/np.sqrt(96)]
+for irrep in subspaces_ordered_by_space:
+    for i in range(len(subspaces_ordered_by_space[irrep])):
+        d = t.test_largest_deviations_from_set(subspaces_ordered_by_space[irrep][i],nums)
+        f.write("For" + irrep + " space " + str(i+1) + ":\nLargest deviation of a any vector component from a value expressed by 1/sqrt(n), n integer: " + str(d[0]) + "; in vector:\n" + str(d[1]) + "\n")
+        vecs_modified_values = t.adjust_values(subspaces_ordered_by_space[irrep][i],nums)
+        modified_labelled_vecs = t.label(vecs_modified_values,irrep,pipqr)
+        add_candidates = None
+        if "E" in irrep:
+            difference_vec_of_eps = modified_labelled_vecs[0].copy()
+            difference_vec_of_eps.add(modified_labelled_vecs[1].negative())
+            difference_vec_of_eps.set_label("(eps1 - eps2)")
+            add_candidates = [difference_vec_of_eps]
+        trafos_mod = t.test_trafo_behavior(modified_labelled_vecs,gen_actions_O_h,add_outcome_candidates=add_candidates)
+        b = t.compare_string_to_file(str(trafos_mod),"../results/expected_trafos/" + irrep + "_expected.txt")
+        f.write("If vector components are rounded to 1/sqrt(n) values, trafos still as expected: " + str(b)+"\n")
     f.write("\n")
 
 ## create files for operators in gpt convention ##

@@ -1,9 +1,8 @@
-import numpy as np
-from base import groups as g
 from base import objects as o
 from base import representations as r
-from base import testing as t
+from base import tools as t
 from base import O_h,gen_actions_O_h                    # import group list of actions used in generation of O_h
+
 
 #(1,0,0) - type 2Pion    
 filepath = "D:/Master/Masterarbeit/results/twopi/data/"
@@ -27,8 +26,7 @@ f.write("Test successful.\n")
 subspaces = r.study_irreps(pi100,O_h,filepath + "summary_irreps/" + name + ".txt")
 subspaces_ordered_by_space = t.reorder_subspaces(subspaces)
 t.export_vectors(subspaces_ordered_by_space,filepath + name + "_vecdata", real = True) # D:/Master/Masterarbeit/results/test_01/twopi100_vecdata", real = True)
-# import sys
-# sys.exit()
+
 all_disjoint = t.subspaces_disjoint(subspaces_ordered_by_space,pi100)
 subspaces_LC_labelled = t.label_all(subspaces_ordered_by_space,pi100)
 
@@ -69,7 +67,7 @@ for irrep,spaces in subspaces_LC_labelled.items():
         f.write(str(trafos))
         f.write("\n")
         f.write("Trafo as expected: ")
-        b = t.compare_string_to_file(str(trafos),"D:/Master/Masterarbeit/tests/expected_trafos/" + irrep + "_expected.txt")
+        b = t.compare_string_to_file(str(trafos),"../results/expected_trafos/" + irrep + "_expected.txt")
         f.write(str(b) + "\n")
     f.write("\n")
 

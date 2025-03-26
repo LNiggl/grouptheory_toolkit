@@ -1,11 +1,9 @@
-import numpy as np
-from base import groups as g
 from base import objects as o
 from base import representations as r
-from base import testing as t
+from base import tools as t
 from base import O_h,gen_actions_O_h                    # import group list of actions used in generation of O_h
 
-#(1,1,0) - type 2Pion    
+
 filepath = "D:/Master/Masterarbeit/results/twopi/data/"
 name = "twopi221"
 p1 = o.PseudoScalarField([2,2,1],modified_momentum_trafo=True)
@@ -67,20 +65,20 @@ for irrep,spaces in subspaces_LC_labelled.items():
         f.write(str(trafos))
         f.write("\n")
         f.write("Trafo as expected: ")
-        b = t.compare_string_to_file(str(trafos),"D:/Master/Masterarbeit/tests/expected_trafos/" + irrep + "_expected.txt")
+        b = t.compare_string_to_file(str(trafos),"../results/expected_trafos/" + irrep + "_expected.txt")
         f.write(str(b) + "\n")
     f.write("\n")
 
 ## create files for operators in gpt convention ##
-master_filepath = filepath + "files_operators_gpt/"
-irrep_folder_prefix = "I1_"
-operator_name = "2pi.g5.1.2.2"
-# to be put together for a total filepath of: master_filepath/irrep_folder_prefix + <irrep_name> + /<int as basis vector enumerator>/operator_name
-for irrep,spaces in subspaces_LC_labelled.items():
-    for i in range(len(spaces)):
-        if i == 0: 
-            folder_name = irrep_folder_prefix + irrep.upper() + "/"
-            t.create_operator_files(spaces[i],master_filepath=master_filepath,irrep_folder=folder_name,filename=operator_name)
-        else: 
-            folder_name = irrep_folder_prefix + irrep.upper() + "/"
-            t.create_operator_files(spaces[i],master_filepath=master_filepath,irrep_folder=folder_name,filename=operator_name+".v"+str(i+1))
+# master_filepath = filepath + "files_operators_gpt/"
+# irrep_folder_prefix = "I1_"
+# operator_name = "2pi.g5.1.2.2"
+# # to be put together for a total filepath of: master_filepath/irrep_folder_prefix + <irrep_name> + /<int as basis vector enumerator>/operator_name
+# for irrep,spaces in subspaces_LC_labelled.items():
+#     for i in range(len(spaces)):
+#         if i == 0: 
+#             folder_name = irrep_folder_prefix + irrep.upper() + "/"
+#             t.create_operator_files(spaces[i],master_filepath=master_filepath,irrep_folder=folder_name,filename=operator_name)
+#         else: 
+#             folder_name = irrep_folder_prefix + irrep.upper() + "/"
+#             t.create_operator_files(spaces[i],master_filepath=master_filepath,irrep_folder=folder_name,filename=operator_name+".v"+str(i+1))
